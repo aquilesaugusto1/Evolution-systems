@@ -150,6 +150,7 @@ class ContratoController extends Controller
             'data_termino' => ['nullable', 'date', 'after_or_equal:data_inicio'],
             'contato_principal' => ['nullable', 'string', 'max:255'],
             'baseline_horas_mes' => ['nullable', 'numeric', 'min:0'],
+            'valor_hora' => ['nullable', 'numeric', 'min:0'],
             'permite_antecipar_baseline' => ['nullable', 'boolean'],
             'possui_engenharia_valores' => ['nullable', 'boolean'], // Adicionado
             'documento_baseline' => [

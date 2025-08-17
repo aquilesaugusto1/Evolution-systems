@@ -127,11 +127,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
              <div>
                 <x-input-label for="baseline_horas_mes" value="Baseline (Horas/mês)" />
-                <x-text-input id="baseline_horas_mes" name="baseline_horas_mes" type="number" step="0.01" class="mt-1 block w-full" :value="old('baseline_horas_mes', $contrato->baseline_horas_mes ?? '')" />
+                <x-text-input id="baseline_horas_mes" name="baseline_horas_mes" type="number" step="0.01" class="mt-1 block w-full" :value="old('baseline_horas_mes', $contrato->baseline_horas_mes ?? '0.00')" />
             </div>
             <div>
                 <x-input-label for="valor_hora" value="Valor/Hora (R$)" />
-                <x-text-input id="valor_hora" name="valor_hora" type="number" step="0.01" class="mt-1 block w-full" :value="old('valor_hora', $contrato->valor_hora ?? '')" placeholder="Ex: 250.00" />
+                <x-text-input id="valor_hora" name="valor_hora" type="number" step="0.01" class="mt-1 block w-full" :value="old('valor_hora', $contrato->valor_hora ?? '0.00')" placeholder="Ex: 250.00" />
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center mt-6">

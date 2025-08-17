@@ -58,18 +58,21 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                             <div class="flex justify-between border-b py-2">
-                                <span class="font-medium text-slate-600">Baseline Original:</span>
-                                <span class="text-slate-800 font-semibold">{{ $contrato->baseline_horas_original ? number_format($contrato->baseline_horas_original, 2) . 'h' : 'N/A' }}</span>
+                                <span class="font-medium text-slate-600">Valor/Hora:</span>
+                                <span class="text-slate-800 font-semibold font-mono">{{ 'R$ ' . number_format($contrato->valor_hora, 2, ',', '.') }}</span>
                             </div>
                             <div class="flex justify-between border-b py-2">
                                 <span class="font-medium text-slate-600">Saldo de Horas:</span>
                                 <span class="text-slate-800 font-bold text-emerald-600">{{ $contrato->baseline_horas_mes ? number_format($contrato->baseline_horas_mes, 2) . 'h' : 'N/A' }}</span>
                             </div>
+                             <div class="flex justify-between border-b py-2">
+                                <span class="font-medium text-slate-600">Baseline Original:</span>
+                                <span class="text-slate-800 font-semibold">{{ $contrato->baseline_horas_original ? number_format($contrato->baseline_horas_original, 2) . 'h' : 'N/A' }}</span>
+                            </div>
                             <div class="flex justify-between border-b py-2">
                                 <span class="font-medium text-slate-600">Permite Antecipar Baseline:</span>
                                 <span class="text-slate-800">{{ $contrato->permite_antecipar_baseline ? 'Sim' : 'Não' }}</span>
                             </div>
-                            <!-- CAMPO ADICIONADO -->
                             <div class="flex justify-between border-b py-2">
                                 <span class="font-medium text-slate-600">Possui Engenharia de Valores:</span>
                                 <span class="text-slate-800">{{ $contrato->possui_engenharia_valores ? 'Sim' : 'Não' }}</span>

@@ -25,8 +25,6 @@ class FaturamentoController extends Controller
 
     public function create(Request $request): View
     {
-        // Linha de debug foi removida daqui
-
         $contratos = Contrato::where('status', 'Ativo')->orderBy('numero_contrato')->get();
         $selectedContratoId = $request->query('contrato_id');
         $apontamentos = collect();
@@ -49,24 +47,22 @@ class FaturamentoController extends Controller
                 ->orderBy('data_apontamento')
                 ->get();
 
-            $totalSegundos = 0;
+            $totalHorasDecimal = 0;
             foreach ($apontamentos as $apontamento) {
-                [$h, $m] = explode(':', $apontamento->horas_gastas);
-                $totalSegundos += (int)$h * 3600 + (int)$m * 60;
+                $totalHorasDecimal += (float)$apontamento->horas_gastas;
             }
 
-            if ($totalSegundos > 0) {
-                $horas = floor($totalSegundos / 3600);
-                $minutos = floor(($totalSegundos % 3600) / 60);
+            if ($totalHorasDecimal > 0) {
+                $valorTotal = $totalHorasDecimal * $contratoSelecionado->valor_hora;
+                $horas = floor($totalHorasDecimal);
+                $minutos = round(($totalHorasDecimal - $horas) * 60);
                 $totalHoras = sprintf('%02d:%02d', $horas, $minutos);
-                $valorTotal = ($totalSegundos / 3600) * $contratoSelecionado->valor_hora;
             }
         }
 
         return view('faturamento.create', compact('contratos', 'apontamentos', 'totalHoras', 'valorTotal', 'contratoSelecionado'));
     }
 
-    // ... todos os outros métodos (store, show, destroy) continuam iguais ...
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -80,12 +76,12 @@ class FaturamentoController extends Controller
         $contrato = Contrato::findOrFail($validated['contrato_id']);
         $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
 
-        $totalSegundos = 0;
+        $totalHorasDecimal = 0;
         foreach ($apontamentos as $apontamento) {
-            [$h, $m] = explode(':', $apontamento->horas_gastas);
-            $totalSegundos += (int)$h * 3600 + (int)$m * 60;
+            $totalHorasDecimal += (float)$apontamento->horas_gastas;
         }
-        $valorTotalFatura = ($totalSegundos / 3600) * $contrato->valor_hora;
+
+        $valorTotalFatura = $totalHorasDecimal * $contrato->valor_hora;
         $anoMes = now()->format('Y-m');
         $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
         $novoNumero = 'FAT-' . $anoMes . '-' . str_pad((string)($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);

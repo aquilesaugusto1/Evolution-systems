@@ -63,6 +63,10 @@
                                 <dt class="text-gray-500">CNPJ:</dt>
                                 <dd class="text-gray-900">{{ $fatura->contrato->empresaParceira->cnpj }}</dd>
                             </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">Valor/Hora Contrato:</dt>
+                                <dd class="text-gray-900 font-mono">{{ 'R$ ' . number_format($fatura->contrato->valor_hora, 2, ',', '.') }}</dd>
+                            </div>
                         </dl>
                     </div>
                     <div class="flex flex-col justify-between items-end p-4 bg-gray-50 rounded-lg">
@@ -102,7 +106,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $apontamento->data_apontamento->format('d/m/Y') }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $apontamento->consultor->nome }} {{ $apontamento->consultor->sobrenome }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-500">{{ $apontamento->descricao }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono">{{ $apontamento->horas_gastas }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono">{{ number_format($apontamento->horas_gastas, 2, ',', '.') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
