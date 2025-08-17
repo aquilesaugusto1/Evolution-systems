@@ -1,0 +1,16 @@
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+
+    paths:
+        # Aqui definimos quais pastas queremos analisar.
+        - app/
+
+    # O 'level' define o quão rigorosa será a análise (de 0 a 9).
+    level: 9
+
+    # Adicionamos esta seção para ignorar arquivos específicos.
+    excludePaths:
+        - app/Imports/AlocacoesImport.php
+        - app/Services/ImportAnalyzer.php
