@@ -27,8 +27,8 @@
                         <ul class="space-y-3">
                             @forelse($consultoresAtivos as $consultor)
                                 <li class="flex justify-between items-center text-sm">
-                                    <span class="font-medium text-slate-700">{{ $consultor['nome'] }}</span>
-                                    <span class="font-bold text-indigo-600">{{ number_format($consultor['horas_30_dias'], 1) }}h</span>
+                                    <span class="font-medium text-slate-700">{{ $consultor->nome }}</span>
+                                    <span class="font-bold text-indigo-600">{{ $consultor->apontamentos_sum_horas_gastas }}h</span>
                                 </li>
                             @empty
                                 <p class="text-sm text-slate-500">Sem apontamentos nos últimos 30 dias.</p>
@@ -98,7 +98,7 @@
                             <div>
                                 <p class="font-semibold text-slate-800">{{ $agenda->assunto }}</p>
                                 <p class="text-sm text-slate-500">
-                                    {{ $agenda->consultor->nome }} para <strong>{{ $agenda->contrato->cliente->nome_empresa ?? 'N/A' }}</strong> (Contrato: #{{ $agenda->contrato->numero_contrato ?? $agenda->contrato->id }})
+                                    {{ $agenda->consultor->nome }} para <strong>{{ $agenda->contrato->empresaParceira->nome_empresa ?? 'N/A' }}</strong> (Contrato: #{{ $agenda->contrato->numero_contrato ?? $agenda->contrato->id }})
                                 </p>
                             </div>
                             <div class="text-right">

@@ -127,7 +127,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
              <div>
                 <x-input-label for="baseline_horas_mes" value="Baseline (Horas/mês)" />
-                <x-text-input id="baseline_horas_mes" name="baseline_horas_mes" type="number" step="0.01" class="mt-1 block w-full" :value="old('baseline_horas_mes', $contrato->baseline_horas_mes ?? '0.00')" />
+                <x-text-input id="baseline_horas_mes" name="baseline_horas_mes" type="text" class="mt-1 block w-full" :value="old('baseline_horas_mes', $contrato->baseline_horas_mes ?? '00:00')" placeholder="HHH:MM" />
             </div>
             <div>
                 <x-input-label for="valor_hora" value="Valor/Hora (R$)" />
@@ -180,6 +180,21 @@
         
         const baselineCheckbox = document.getElementById('permite_antecipar_baseline');
         const documentoContainer = document.getElementById('documento_baseline_container');
+
+        const timeInput = document.getElementById('baseline_horas_mes');
+
+        if (timeInput) {
+            timeInput.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 2) {
+                    const minutes = value.slice(-2);
+                    const hours = value.slice(0, value.length - 2);
+                    e.target.value = hours + ':' + minutes;
+                } else {
+                    e.target.value = value;
+                }
+            });
+        }
 
         function toggleEspecifiqueOutro() {
             especifiqueOutroContainer.classList.toggle('hidden', !outroCheckbox.checked);

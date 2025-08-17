@@ -69,7 +69,7 @@ class ApontamentosExport implements FromCollection, WithHeadings, WithMapping
             $apontamento->contrato?->empresaParceira?->nome_empresa,
             $apontamento->contrato?->id,
             $apontamento->descricao,
-            number_format($apontamento->horas_gastas, 2, ',', '.'),
+            $apontamento->horas_gastas,
             $apontamento->status,
         ];
     }

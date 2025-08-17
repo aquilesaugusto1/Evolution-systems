@@ -8,12 +8,12 @@ use App\Models\Contrato;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Traits\ConvertsTime;
 
 class RelatorioService
 {
-    /**
-     * @return array{consultores: \Illuminate\Database\Eloquent\Collection<int, User>}
-     */
+    use ConvertsTime;
+
     public function getFiltrosAlocacao(): array
     {
         $consultoresPJ = User::where('funcao', 'consultor')
@@ -25,10 +25,6 @@ class RelatorioService
         return ['consultores' => $consultoresPJ];
     }
 
-    /**
-     * @param  array{data_inicio: string, data_fim: string, consultores_id: array<int, int>}  $filtros
-     * @return array{resultados: array<int, array<string, mixed>>, dias_uteis: int}
-     */
     public function gerarRelatorioAlocacao(array $filtros): array
     {
         $inicioPeriodo = Carbon::parse($filtros['data_inicio'])->startOfDay();
@@ -41,23 +37,25 @@ class RelatorioService
         $resultados = [];
 
         foreach ($consultores as $consultor) {
-            $horasApontadas = Apontamento::where('consultor_id', $consultor->id)
+            $apontamentos = Apontamento::where('consultor_id', $consultor->id)
                 ->whereBetween('data_apontamento', [$inicioPeriodo, $fimPeriodo])
-                ->sum('horas_gastas');
+                ->get();
 
+            $horasApontadas = $apontamentos->sum('horas_gastas_decimal');
+            
             $numeroDeAgendas = Agenda::where('consultor_id', $consultor->id)
                 ->whereBetween('data_hora', [$inicioPeriodo, $fimPeriodo])
                 ->where('status', '!=', 'Cancelada')
                 ->count();
 
-            $horasUteisRestantes = $horasUteisDoPeriodo - abs((float) $horasApontadas);
+            $horasUteisRestantes = $horasUteisDoPeriodo - $horasApontadas;
 
             $resultados[] = [
                 'consultor' => $consultor,
-                'horas_apontadas' => $horasApontadas,
+                'horas_apontadas' => $this->decimalToTime($horasApontadas),
                 'numero_agendas' => $numeroDeAgendas,
-                'horas_uteis_periodo' => $horasUteisDoPeriodo,
-                'horas_uteis_restantes' => $horasUteisRestantes,
+                'horas_uteis_periodo' => $this->decimalToTime($horasUteisDoPeriodo),
+                'horas_uteis_restantes' => $this->decimalToTime($horasUteisRestantes),
             ];
         }
 
@@ -80,10 +78,6 @@ class RelatorioService
         return $diasUteis;
     }
 
-    /**
-     * @param  array<int, int>  $anos
-     * @return array<int, string>
-     */
     private function getFeriados(array $anos): array
     {
         $feriados = [];
@@ -106,9 +100,6 @@ class RelatorioService
         return $feriados;
     }
 
-    /**
-     * @return array{contratos: \Illuminate\Database\Eloquent\Collection<int, Contrato>}
-     */
     public function getFiltrosContratos(): array
     {
         $contratos = Contrato::where('status', 'Ativo')->with('empresaParceira')->orderBy('numero_contrato')->get();
@@ -116,25 +107,21 @@ class RelatorioService
         return compact('contratos');
     }
 
-    /**
-     * @param  array{contratos_id: array<int, int>}  $filtros
-     * @return array{resultados: array<int, array<string, mixed>>}
-     */
     public function gerarRelatorioContratos(array $filtros): array
     {
         $contratos = Contrato::with('empresaParceira')->whereIn('id', $filtros['contratos_id'])->get();
         $resultados = [];
 
         foreach ($contratos as $contrato) {
-            $horasOriginais = $contrato->baseline_horas_original ?? 0;
-            $horasRestantes = $contrato->baseline_horas_mes ?? 0;
-            $horasGastas = (float) $horasOriginais - (float) $horasRestantes;
-            $percentualGasto = ($horasOriginais > 0) ? ($horasGastas / (float) $horasOriginais) * 100 : 0;
+            $horasOriginais = $contrato->baseline_horas_original_decimal;
+            $horasRestantes = $contrato->baseline_horas_mes_decimal;
+            $horasGastas = $horasOriginais - $horasRestantes;
+            $percentualGasto = ($horasOriginais > 0) ? ($horasGastas / $horasOriginais) * 100 : 0;
 
             $resultados[] = [
                 'contrato' => $contrato,
-                'horas_gastas' => $horasGastas,
-                'saldo_horas' => $horasRestantes,
+                'horas_gastas' => $this->decimalToTime($horasGastas),
+                'saldo_horas' => $this->decimalToTime($horasRestantes),
                 'percentual_gasto' => round($percentualGasto),
             ];
         }
@@ -142,9 +129,6 @@ class RelatorioService
         return ['resultados' => $resultados];
     }
 
-    /**
-     * @return array{contratos: \Illuminate\Database\Eloquent\Collection<int, Contrato>}
-     */
     public function getFiltrosHistoricoTechLeads(): array
     {
         $contratos = Contrato::where('status', 'Ativo')->with('empresaParceira')->orderBy('numero_contrato')->get();
@@ -152,10 +136,6 @@ class RelatorioService
         return compact('contratos');
     }
 
-    /**
-     * @param  array{contrato_id: int|string}  $filtros
-     * @return array{contrato: Contrato, historico: \Illuminate\Support\Collection<int, \stdClass>}
-     */
     public function gerarRelatorioHistoricoTechLeads(array $filtros): array
     {
         $contrato = Contrato::with('empresaParceira')->findOrFail($filtros['contrato_id']);

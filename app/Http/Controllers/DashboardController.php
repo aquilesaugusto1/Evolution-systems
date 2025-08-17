@@ -40,11 +40,16 @@ class DashboardController extends Controller
             ];
 
             $consultoresAtivos = User::where('funcao', 'consultor')
-                ->withSum(['apontamentos' => function ($query) {
+                ->with(['apontamentos' => function ($query) {
                     $query->where('data_apontamento', '>=', now()->subDays(30));
-                }], 'horas_gastas')
+                }])
                 ->get()
+                ->map(function ($consultor) {
+                    $consultor->apontamentos_sum_horas_gastas = $consultor->apontamentos->sum('horas_gastas_decimal');
+                    return $consultor;
+                })
                 ->sortByDesc('apontamentos_sum_horas_gastas');
+
 
             $agendasPorMes = Agenda::select(
                 DB::raw('DATE_FORMAT(data_hora, "%Y-%m") as mes'),

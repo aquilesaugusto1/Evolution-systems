@@ -2,20 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\ConvertsTime;
 use App\Traits\Userstamps;
-use Database\Factories\ContratoFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * @method static ContratoFactory factory(...$parameters)
- */
 class Contrato extends Model
 {
-    use HasFactory, Userstamps;
+    use HasFactory, Userstamps, ConvertsTime;
 
     protected $fillable = [
         'cliente_id',
@@ -40,23 +37,43 @@ class Contrato extends Model
         'data_inicio' => 'date',
         'data_termino' => 'date',
         'permite_antecipar_baseline' => 'boolean',
-        'baseline_horas_mes' => 'decimal:2',
-        'valor_hora' => 'decimal:2',
-        'baseline_horas_original' => 'decimal:2',
+        'valor_hora' => 'float',
         'possui_engenharia_valores' => 'boolean',
     ];
 
-    /**
-     * @return BelongsTo<EmpresaParceira, Contrato>
-     */
+    public function getBaselineHorasMesDecimalAttribute(): float
+    {
+        return self::timeToDecimal((string) $this->attributes['baseline_horas_mes']);
+    }
+
+    public function setBaselineHorasMesAttribute($value)
+    {
+        if (is_numeric($value)) {
+            $this->attributes['baseline_horas_mes'] = self::decimalToTime((float) $value);
+        } else {
+            $this->attributes['baseline_horas_mes'] = $value;
+        }
+    }
+
+    public function getBaselineHorasOriginalDecimalAttribute(): float
+    {
+        return self::timeToDecimal((string) $this->attributes['baseline_horas_original']);
+    }
+
+    public function setBaselineHorasOriginalAttribute($value)
+    {
+        if (is_numeric($value)) {
+            $this->attributes['baseline_horas_original'] = self::decimalToTime((float) $value);
+        } else {
+            $this->attributes['baseline_horas_original'] = $value;
+        }
+    }
+
     public function empresaParceira(): BelongsTo
     {
         return $this->belongsTo(EmpresaParceira::class, 'cliente_id');
     }
 
-    /**
-     * @return BelongsToMany<User, Contrato>
-     */
     public function usuarios(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'contrato_usuario', 'contrato_id', 'usuario_id')
@@ -64,33 +81,21 @@ class Contrato extends Model
             ->withTimestamps();
     }
 
-    /**
-     * @return BelongsToMany<User, Contrato>
-     */
     public function coordenadores(): BelongsToMany
     {
         return $this->usuarios()->wherePivot('funcao_contrato', 'coordenador');
     }
 
-    /**
-     * @return BelongsToMany<User, Contrato>
-     */
     public function techLeads(): BelongsToMany
     {
         return $this->usuarios()->wherePivot('funcao_contrato', 'tech_lead');
     }
 
-    /**
-     * @return BelongsToMany<User, Contrato>
-     */
     public function consultores(): BelongsToMany
     {
         return $this->usuarios()->wherePivot('funcao_contrato', 'consultor');
     }
 
-    /**
-     * @return HasMany<Fatura>
-     */
     public function faturas(): HasMany
     {
         return $this->hasMany(Fatura::class);

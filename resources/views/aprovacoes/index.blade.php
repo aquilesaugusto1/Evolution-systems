@@ -27,7 +27,7 @@
                                         <p class="text-xs text-slate-500">Enviado em: {{ $apontamento->created_at->format('d/m/Y H:i') }}</p>
                                     </div>
                                     <div class="text-right flex-shrink-0 ml-4">
-                                        <p class="text-2xl font-bold text-indigo-600">{{ number_format($apontamento->horas_gastas, 1) }}h</p>
+                                        <p class="text-2xl font-bold text-indigo-600">{{ $apontamento->horas_gastas }}h</p>
                                         <p class="text-xs font-semibold {{ $apontamento->faturavel ? 'text-emerald-600' : 'text-amber-600' }}">{{ $apontamento->faturavel ? 'Faturável' : 'Não Faturável' }}</p>
                                     </div>
                                 </div>

@@ -40,8 +40,8 @@
                         
                         @if($contrato->baseline_horas_original)
                             @php
-                                $horasOriginais = $contrato->baseline_horas_original;
-                                $horasRestantes = $contrato->baseline_horas_mes;
+                                $horasOriginais = $contrato->baseline_horas_original_decimal;
+                                $horasRestantes = $contrato->baseline_horas_mes_decimal;
                                 $horasConsumidas = $horasOriginais - $horasRestantes;
                                 $percentualConsumido = $horasOriginais > 0 ? ($horasConsumidas / $horasOriginais) * 100 : 0;
                             @endphp
@@ -63,11 +63,11 @@
                             </div>
                             <div class="flex justify-between border-b py-2">
                                 <span class="font-medium text-slate-600">Saldo de Horas:</span>
-                                <span class="text-slate-800 font-bold text-emerald-600">{{ $contrato->baseline_horas_mes ? number_format($contrato->baseline_horas_mes, 2) . 'h' : 'N/A' }}</span>
+                                <span class="text-slate-800 font-bold text-emerald-600">{{ $contrato->baseline_horas_mes ? $contrato->baseline_horas_mes . 'h' : 'N/A' }}</span>
                             </div>
                              <div class="flex justify-between border-b py-2">
                                 <span class="font-medium text-slate-600">Baseline Original:</span>
-                                <span class="text-slate-800 font-semibold">{{ $contrato->baseline_horas_original ? number_format($contrato->baseline_horas_original, 2) . 'h' : 'N/A' }}</span>
+                                <span class="text-slate-800 font-semibold">{{ $contrato->baseline_horas_original ? $contrato->baseline_horas_original . 'h' : 'N/A' }}</span>
                             </div>
                             <div class="flex justify-between border-b py-2">
                                 <span class="font-medium text-slate-600">Permite Antecipar Baseline:</span>

@@ -62,7 +62,6 @@ class ApontamentoController extends Controller
             'faturavel' => 'nullable|boolean',
         ]);
 
-        /** @var Agenda $agenda */
         $agenda = Agenda::findOrFail($validated['agenda_id']);
         $apontamento = Apontamento::firstOrNew(['agenda_id' => $agenda->id]);
 
@@ -101,36 +100,32 @@ class ApontamentoController extends Controller
         return response()->json(['message' => 'Apontamento salvo e enviado para aprovação!']);
     }
 
-    /**
-     * @param  Collection<int, Agenda>  $agendas
-     * @return SupportCollection<int, array{id: int, title: string|null, start: Carbon, color: string, extendedProps: array{consultor: string|null, assunto: string, contrato: string, status: string, hora_inicio: string, hora_fim: string, descricao: string, faturavel: bool, anexo_url: string|null, motivo_rejeicao: string|null}}>
-     */
     private function formatEvents(Collection $agendas): SupportCollection
     {
         return $agendas->map(function (Agenda $agenda) {
             $apontamento = $agenda->apontamento;
             $status = 'Não Apontado';
-            $color = '#6B7280'; // Cinza
+            $color = '#6B7280'; 
 
             if ($agenda->status === 'Cancelada') {
                 $status = 'Cancelada';
-                $color = '#EF4444'; // Vermelho
+                $color = '#EF4444'; 
             } elseif ($apontamento) {
                 $status = $apontamento->status;
                 switch ($status) {
                     case 'Pendente':
                         $color = '#F59E0B';
-                        break; // Amarelo
+                        break; 
                     case 'Aprovado':
                         $color = '#10B981';
-                        break; // Verde
+                        break; 
                     case 'Rejeitado':
                         $color = '#EF4444';
-                        break; // Vermelho
+                        break; 
                 }
             } else {
                 $status = 'Agendada';
-                $color = '#3B82F6'; // Azul
+                $color = '#3B82F6'; 
             }
 
             return [

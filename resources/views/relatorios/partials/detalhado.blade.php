@@ -16,11 +16,10 @@
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ \Carbon\Carbon::parse($resultado->data_apontamento)->format('d/m/Y') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $resultado->consultor?->nome ?? 'N/A' }}</td>
-                    {{-- CORREÇÃO: Acesso seguro para evitar erro com cliente nulo --}}
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $resultado->contrato?->cliente?->nome_empresa ?? 'N/A' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $resultado->contrato?->id ?? 'N/A' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ Str::limit($resultado->descricao, 50) }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ number_format($resultado->horas_gastas, 2, ',', '.') }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $resultado->horas_gastas }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                             @if($resultado->status == 'Aprovado') bg-green-100 text-green-800 @elseif($resultado->status == 'Pendente') bg-yellow-100 text-yellow-800 @else bg-red-100 text-red-800 @endif">

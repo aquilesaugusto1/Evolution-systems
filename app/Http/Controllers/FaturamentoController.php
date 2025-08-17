@@ -6,14 +6,17 @@ use App\Enums\FaturaStatusEnum;
 use App\Models\Apontamento;
 use App\Models\Contrato;
 use App\Models\Fatura;
+use App\Traits\ConvertsTime;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Carbon;
 
 class FaturamentoController extends Controller
 {
+    use ConvertsTime;
+
     public function index(): View
     {
         $faturas = Fatura::with('contrato.empresaParceira')
@@ -47,16 +50,11 @@ class FaturamentoController extends Controller
                 ->orderBy('data_apontamento')
                 ->get();
 
-            $totalHorasDecimal = 0;
-            foreach ($apontamentos as $apontamento) {
-                $totalHorasDecimal += (float)$apontamento->horas_gastas;
-            }
+            $totalHorasDecimal = $apontamentos->sum('horas_gastas_decimal');
 
             if ($totalHorasDecimal > 0) {
-                $valorTotal = $totalHorasDecimal * $contratoSelecionado->valor_hora;
-                $horas = floor($totalHorasDecimal);
-                $minutos = round(($totalHorasDecimal - $horas) * 60);
-                $totalHoras = sprintf('%02d:%02d', $horas, $minutos);
+                $valorTotal = $totalHorasDecimal * ($contratoSelecionado->valor_hora ?? 0);
+                $totalHoras = self::decimalToTime($totalHorasDecimal);
             }
         }
 
@@ -76,15 +74,12 @@ class FaturamentoController extends Controller
         $contrato = Contrato::findOrFail($validated['contrato_id']);
         $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
 
-        $totalHorasDecimal = 0;
-        foreach ($apontamentos as $apontamento) {
-            $totalHorasDecimal += (float)$apontamento->horas_gastas;
-        }
+        $totalHorasDecimal = $apontamentos->sum('horas_gastas_decimal');
 
-        $valorTotalFatura = $totalHorasDecimal * $contrato->valor_hora;
+        $valorTotalFatura = $totalHorasDecimal * ($contrato->valor_hora ?? 0);
         $anoMes = now()->format('Y-m');
         $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
-        $novoNumero = 'FAT-' . $anoMes . '-' . str_pad((string)($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
+        $novoNumero = 'FAT-'.$anoMes.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
 
         try {
             DB::beginTransaction();
@@ -106,7 +101,8 @@ class FaturamentoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Erro ao gerar a fatura: ' . $e->getMessage());
+
+            return back()->with('error', 'Erro ao gerar a fatura: '.$e->getMessage());
         }
     }
 
@@ -131,7 +127,8 @@ class FaturamentoController extends Controller
             return redirect()->route('faturamento.index')->with('success', 'Fatura cancelada e apontamentos liberados.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Erro ao cancelar a fatura: ' . $e->getMessage());
+
+            return back()->with('error', 'Erro ao cancelar a fatura: '.$e->getMessage());
         }
     }
 }

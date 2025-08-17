@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Apontamento;
 use App\Models\User;
+use App\Traits\ConvertsTime;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,8 @@ use LogicException;
 
 class AprovacaoController extends Controller
 {
+    use ConvertsTime;
+
     public function index(): View
     {
         $this->authorize('viewAny', Apontamento::class);
@@ -55,9 +58,14 @@ class AprovacaoController extends Controller
                     $apontamento->agenda->save();
                 }
 
-                if ($apontamento->faturavel && $apontamento->contrato && $apontamento->contrato->baseline_horas_mes !== null) {
-                    $horasASubtrair = abs($apontamento->horas_gastas);
-                    $apontamento->contrato->decrement('baseline_horas_mes', $horasASubtrair);
+                if ($apontamento->faturavel && ($contrato = $apontamento->contrato)) {
+                    $horasContratoDecimal = $contrato->baseline_horas_mes_decimal;
+                    $horasApontamentoDecimal = abs($apontamento->horas_gastas_decimal);
+                    
+                    $novoSaldoDecimal = $horasContratoDecimal - $horasApontamentoDecimal;
+                    
+                    $contrato->baseline_horas_mes = self::decimalToTime($novoSaldoDecimal);
+                    $contrato->save();
                 }
             });
 
