@@ -52,7 +52,7 @@ class ProfileController extends Controller
     {
         $request->validate([
             'skills' => ['sometimes', 'array'],
-            'skills.*' => ['required', 'integer', 'min:1', 'max:5'],
+            'skills.*' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
         $user = $request->user();
@@ -60,7 +60,16 @@ class ProfileController extends Controller
             throw new LogicException('User not authenticated.');
         }
 
-        $user->skills()->sync($request->input('skills', []));
+        $skillsToSync = [];
+        $submittedSkills = $request->input('skills', []);
+
+        foreach ($submittedSkills as $skillId => $nivel) {
+            if (!empty($nivel)) {
+                $skillsToSync[$skillId] = ['nivel' => $nivel];
+            }
+        }
+
+        $user->skills()->sync($skillsToSync);
 
         return Redirect::route('profile.edit')->with('status', 'skills-updated');
     }
