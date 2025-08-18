@@ -50,7 +50,9 @@ class FaturamentoController extends Controller
                 ->orderBy('data_apontamento')
                 ->get();
 
-            $totalHorasDecimal = $apontamentos->sum('horas_gastas_decimal');
+            $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
+                return $carry + abs($item->horas_gastas_decimal);
+            }, 0);
 
             if ($totalHorasDecimal > 0) {
                 $valorTotal = $totalHorasDecimal * ($contratoSelecionado->valor_hora ?? 0);
@@ -74,7 +76,9 @@ class FaturamentoController extends Controller
         $contrato = Contrato::findOrFail($validated['contrato_id']);
         $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
 
-        $totalHorasDecimal = $apontamentos->sum('horas_gastas_decimal');
+        $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
+            return $carry + abs($item->horas_gastas_decimal);
+        }, 0);
 
         $valorTotalFatura = $totalHorasDecimal * ($contrato->valor_hora ?? 0);
         $anoMes = now()->format('Y-m');
