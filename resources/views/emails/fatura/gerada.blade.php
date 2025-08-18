@@ -3,80 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fatura {{ $fatura->numero_fatura }}</title>
+    <title>Sua Fatura Chegou - Evolution Systems</title>
     <style>
-        body { font-family: 'Helvetica', sans-serif; color: #333; font-size: 12px; line-height: 1.6; }
-        .container { width: 100%; margin: 0 auto; padding: 20px; }
-        .header { text-align: center; margin-bottom: 40px; }
-        .header h1 { margin: 0; font-size: 24px; color: #2d3748; }
-        .header p { margin: 5px 0; color: #718096; }
-        .details { margin-bottom: 40px; }
-        .details table { width: 100%; border-collapse: collapse; }
-        .details th, .details td { padding: 8px 0; text-align: left; }
-        .details .right { text-align: right; }
-        .items table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .items th, .items td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
-        .items th { background-color: #f7fafc; font-weight: bold; }
-        .items .total-row td { border-top: 2px solid #2d3748; font-weight: bold; font-size: 14px; }
-        .items .hours { text-align: right; }
-        .footer { margin-top: 50px; text-align: center; color: #718096; font-size: 10px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            background-color: #f8f9fa;
+            color: #343a40;
+            margin: 0;
+            padding: 20px;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .email-header {
+            background-color: #343a40;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .email-header img {
+            max-width: 200px;
+            height: auto;
+        }
+        .email-body {
+            padding: 30px 40px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .email-body h1 {
+            font-size: 24px;
+            color: #212529;
+            margin-top: 0;
+        }
+        .invoice-details {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border: 1px solid #e9ecef;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        .detail-item strong {
+            font-weight: 600;
+            color: #212529;
+        }
+        .cta-button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .cta-button {
+            background-color: #0d6efd;
+            color: #ffffff;
+            padding: 15px 35px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+        }
+        .email-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>FATURA</h1>
-            <p>Evolution Systems</p>
+    <div class="email-container">
+        <div class="email-header">
+            <!-- Coloque a URL pública da sua logo aqui -->
+            <img src="https://www.evolutionsystems.com.br/assets/img/logo.png" alt="Logo Evolution Systems">
         </div>
+        <div class="email-body">
+            <h1>Sua fatura está pronta!</h1>
+            <p>Olá, {{ $nomeCliente }},</p>
+            <p>A fatura referente aos serviços prestados pela Evolution Systems já está disponível. O PDF com os detalhes e o QR Code para pagamento via PIX está anexado a este e-mail.</p>
+            
+            <div class="invoice-details">
+                <div class="detail-item">
+                    <span>Número da Fatura</span>
+                    <strong>{{ $numeroFatura }}</strong>
+                </div>
+                <div class="detail-item">
+                    <span>Data de Vencimento</span>
+                    <strong>{{ $vencimentoFatura }}</strong>
+                </div>
+                <div class="detail-item">
+                    <span>Valor Total</span>
+                    <strong style="font-size: 18px;">R$ {{ $valorFatura }}</strong>
+                </div>
+            </div>
 
-        <div class="details">
-            <table>
-                <tr>
-                    <td>
-                        <strong>CLIENTE:</strong><br>
-                        {{ $fatura->contrato->empresaParceira->nome_empresa }}<br>
-                        CNPJ: {{ $fatura->contrato->empresaParceira->cnpj }}
-                    </td>
-                    <td class="right">
-                        <strong>FATURA Nº:</strong> {{ $fatura->numero_fatura }}<br>
-                        <strong>Data de Emissão:</strong> {{ $fatura->data_emissao->format('d/m/Y') }}<br>
-                        <strong>Data de Vencimento:</strong> {{ $fatura->data_vencimento->format('d/m/Y') }}
-                    </td>
-                </tr>
-            </table>
+            <p>Para sua conveniência, você também pode visualizar e pagar sua fatura online através do nosso portal de pagamentos seguro.</p>
+            
+            <div class="cta-button-container">
+                <a href="{{ $fatura->asaas_payment_url }}" class="cta-button">Pagar Fatura Online</a>
+            </div>
+
+            <p>Se tiver qualquer dúvida, basta responder a este e-mail.</p>
+            <p>Agradecemos a sua parceria!<br><strong>Equipe Evolution Systems</strong></p>
         </div>
-
-        <div class="items">
-            <h2>Detalhes dos Serviços Prestados</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Consultor</th>
-                        <th>Descrição do Serviço</th>
-                        <th class="hours">Horas</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($fatura->apontamentos as $apontamento)
-                    <tr>
-                        <td>{{ $apontamento->data_apontamento->format('d/m/Y') }}</td>
-                        <td>{{ $apontamento->consultor->nome }}</td>
-                        <td>{{ $apontamento->descricao }}</td>
-                        <td class="hours">{{ $apontamento->horas_gastas }}</td>
-                    </tr>
-                    @endforeach
-                    <tr class="total-row">
-                        <td colspan="3" class="right"><strong>VALOR TOTAL</strong></td>
-                        <td class="hours"><strong>R$ {{ number_format($fatura->valor_total, 2, ',', '.') }}</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="footer">
-            <p>Esta é uma fatura gerada automaticamente pelo sistema Agen.</p>
-            <p>Para dúvidas ou informações, entre em contato conosco.</p>
+        <div class="email-footer">
+            <p>&copy; {{ date('Y') }} Evolution Systems. Todos os direitos reservados.</p>
+            <p>Este é um e-mail automático. Por favor, não o responda diretamente.</p>
         </div>
     </div>
 </body>
