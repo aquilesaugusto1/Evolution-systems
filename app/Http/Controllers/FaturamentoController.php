@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FaturaStatusEnum;
+use App\Mail\FaturaGeradaMail;
 use App\Models\Apontamento;
 use App\Models\Contrato;
 use App\Models\Fatura;
@@ -11,6 +12,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class FaturamentoController extends Controller
@@ -73,20 +76,21 @@ class FaturamentoController extends Controller
             'apontamento_ids.*' => 'exists:apontamentos,id',
         ]);
 
-        $contrato = Contrato::findOrFail($validated['contrato_id']);
-        $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
-
-        $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
-            return $carry + abs($item->horas_gastas_decimal);
-        }, 0);
-
-        $valorTotalFatura = $totalHorasDecimal * ($contrato->valor_hora ?? 0);
-        $anoMes = now()->format('Y-m');
-        $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
-        $novoNumero = 'FAT-'.$anoMes.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
-
+        $fatura = null;
         try {
             DB::beginTransaction();
+
+            $contrato = Contrato::with('empresaParceira')->findOrFail($validated['contrato_id']);
+            $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
+
+            $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
+                return $carry + abs($item->horas_gastas_decimal);
+            }, 0);
+
+            $valorTotalFatura = $totalHorasDecimal * ($contrato->valor_hora ?? 0);
+            $anoMes = now()->format('Y-m');
+            $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
+            $novoNumero = 'FAT-'.$anoMes.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
 
             $fatura = Fatura::create([
                 'contrato_id' => $contrato->id,
@@ -101,13 +105,37 @@ class FaturamentoController extends Controller
 
             DB::commit();
 
-            return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso.');
-
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Erro ao gerar a fatura: '.$e->getMessage());
 
             return back()->with('error', 'Erro ao gerar a fatura: '.$e->getMessage());
         }
+
+        // Envio do e-mail após a transação ser bem-sucedida
+        if ($fatura) {
+            try {
+                $fatura->load('contrato.empresaParceira', 'apontamentos.consultor');
+                $contatoComercial = $fatura->contrato->empresaParceira->contato_comercial;
+
+                if (isset($contatoComercial['email']) && filter_var($contatoComercial['email'], FILTER_VALIDATE_EMAIL)) {
+                    Mail::to($contatoComercial['email'])->send(new FaturaGeradaMail($fatura));
+                    Log::info("E-mail de fatura {$fatura->numero_fatura} enviado para {$contatoComercial['email']}");
+
+                    return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada e enviada ao cliente com sucesso!');
+                } else {
+                    Log::warning("Fatura {$fatura->numero_fatura} gerada, mas o cliente não possui um e-mail comercial válido para envio.");
+
+                    return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso, mas não foi enviada por e-mail (cliente sem contato comercial válido).');
+                }
+            } catch (\Exception $e) {
+                Log::error("Falha ao enviar e-mail da fatura {$fatura->numero_fatura}: ".$e->getMessage());
+
+                return redirect()->route('faturamento.show', $fatura)->with('error', 'Fatura gerada, mas houve um erro ao enviar o e-mail.');
+            }
+        }
+
+        return back()->with('error', 'Ocorreu um erro inesperado e a fatura não pôde ser processada.');
     }
 
     public function show(Fatura $fatura): View
