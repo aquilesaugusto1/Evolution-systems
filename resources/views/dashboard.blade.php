@@ -43,12 +43,23 @@
                             <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
                                 <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Personalizar Dashboard</h3>
                                 <div class="mt-4 grid grid-cols-3 gap-6">
-                                    <div class="col-span-1">
-                                        <h4 class="font-semibold mb-2">Widgets Disponíveis</h4>
-                                        <div id="available-widgets" class="p-4 bg-gray-100 rounded-lg min-h-[200px] space-y-2">
-                                            @foreach($availableWidgets as $widget)
-                                                <div class="p-3 bg-white border rounded shadow-sm cursor-move" data-id="{{ $widget['id'] }}" data-component="{{ $widget['component'] }}">{{ $widget['name'] }}</div>
-                                            @endforeach
+                                    <div class="col-span-1 space-y-4">
+                                        <div>
+                                            <h4 class="font-semibold mb-2">Widgets Disponíveis</h4>
+                                            <div id="available-widgets" class="p-4 bg-gray-100 rounded-lg min-h-[200px] space-y-2">
+                                                @foreach($availableWidgets as $widget)
+                                                    <div class="p-3 bg-white border rounded shadow-sm cursor-move" data-id="{{ $widget['id'] }}" data-component="{{ $widget['component'] }}">{{ $widget['name'] }}</div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold mb-2 text-red-600">Remover Widget</h4>
+                                            <div id="trash-widgets" class="p-4 border-2 border-dashed border-red-300 bg-red-50 rounded-lg min-h-[100px] flex items-center justify-center">
+                                                <div class="text-center text-red-500">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    <p class="text-xs mt-1">Arraste aqui para remover</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-span-2 grid grid-cols-2 gap-4">
@@ -100,6 +111,15 @@
                     this.sortableColumns.push(new Sortable(document.getElementById('available-widgets'), {...options, group: { name: 'widgets', pull: 'clone', put: false }, sort: false }));
                     this.sortableColumns.push(new Sortable(document.getElementById('modal-coluna-1'), options));
                     this.sortableColumns.push(new Sortable(document.getElementById('modal-coluna-2'), options));
+                    
+                    // Lógica da Lixeira
+                    const trashEl = document.getElementById('trash-widgets');
+                    this.sortableColumns.push(new Sortable(trashEl, {
+                        group: 'widgets',
+                        onAdd: function (evt) {
+                            evt.item.remove(); // Remove o widget do DOM
+                        }
+                    }));
                 },
                 destroySortable() {
                     this.sortableColumns.forEach(s => s.destroy());
@@ -141,7 +161,6 @@
                     })
                     .then(response => {
                         if (!response.ok) {
-                           // Se a resposta não for OK, tentamos ler como JSON para ver o erro de validação
                            return response.json().then(err => { throw err; });
                         }
                         return response.json();
@@ -155,7 +174,6 @@
                     })
                     .catch((error) => {
                         console.error('Erro no fetch:', error);
-                        // Mostra os erros de validação de forma mais clara
                         let errorMessage = 'Ocorreu um erro de comunicação.';
                         if (error.errors) {
                             errorMessage = 'Erros de validação:\n';
