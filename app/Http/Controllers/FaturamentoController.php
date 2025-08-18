@@ -84,7 +84,6 @@ class FaturamentoController extends Controller
                 $contrato = Contrato::with('empresaParceira')->findOrFail($validated['contrato_id']);
                 $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
 
-                // CORREÇÃO: Garante que a soma das horas seja sempre positiva usando abs().
                 $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
                     return $carry + abs($item->horas_gastas_decimal);
                 }, 0);
@@ -95,7 +94,6 @@ class FaturamentoController extends Controller
                 $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
                 $novoNumero = 'FAT-'.$anoMes.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
 
-                // 1. Cria a fatura local
                 $fatura = Fatura::create([
                     'contrato_id' => $contrato->id,
                     'numero_fatura' => $novoNumero,
@@ -105,17 +103,14 @@ class FaturamentoController extends Controller
                     'status' => FaturaStatusEnum::EM_ABERTO,
                 ]);
 
-                // 2. Vincula os apontamentos à fatura
                 Apontamento::whereIn('id', $validated['apontamento_ids'])->update(['fatura_id' => $fatura->id]);
 
-                // 3. Cria a cobrança no Asaas
                 $cobrancaAsaas = $asaasService->criarCobranca($fatura);
 
                 if (! $cobrancaAsaas) {
                     throw new \Exception('Não foi possível gerar a cobrança no gateway de pagamento.');
                 }
 
-                // 4. Atualiza a fatura local com os dados do Asaas
                 $fatura->update([
                     'asaas_payment_id' => $cobrancaAsaas['id'],
                     'asaas_payment_url' => $cobrancaAsaas['invoiceUrl'],
@@ -126,7 +121,6 @@ class FaturamentoController extends Controller
                 return $fatura;
             });
 
-            // 5. Se tudo deu certo, envia o e-mail
             if ($fatura) {
                 $this->enviarEmailFatura($fatura);
                 return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso e registrada no Asaas!');
@@ -162,10 +156,8 @@ class FaturamentoController extends Controller
             }
         } catch (\Exception $e) {
             Log::error("Falha ao enviar e-mail da fatura {$fatura->numero_fatura}: ".$e->getMessage());
-            // Não retorna erro para o usuário, apenas loga.
         }
     }
-
 
     public function show(Fatura $fatura): View
     {
@@ -182,23 +174,29 @@ class FaturamentoController extends Controller
         return $pdf->download('fatura-'.$fatura->numero_fatura.'.pdf');
     }
 
-    public function destroy(Fatura $fatura): RedirectResponse
+    public function destroy(Fatura $fatura, AsaasService $asaasService): RedirectResponse
     {
-        // Futuramente, podemos adicionar a lógica para cancelar a cobrança no Asaas aqui.
+        // 1. Primeiro, tenta cancelar no Asaas
+        if ($fatura->asaas_payment_id) {
+            $canceladoAsaas = $asaasService->cancelarCobranca($fatura->asaas_payment_id);
+            if (! $canceladoAsaas) {
+                // Se falhar, para tudo e avisa o usuário.
+                return back()->with('error', 'Não foi possível cancelar a cobrança no gateway de pagamento. A fatura não foi alterada. Verifique os logs para mais detalhes.');
+            }
+        }
+
+        // 2. Se o cancelamento no Asaas deu certo (ou não era necessário), prossegue com as alterações locais
         try {
-            DB::beginTransaction();
+            DB::transaction(function () use ($fatura) {
+                Apontamento::where('fatura_id', $fatura->id)->update(['fatura_id' => null]);
+                $fatura->update(['status' => FaturaStatusEnum::CANCELADA]);
+                $fatura->delete(); // Soft delete
+            });
 
-            Apontamento::where('fatura_id', $fatura->id)->update(['fatura_id' => null]);
-            $fatura->update(['status' => FaturaStatusEnum::CANCELADA]);
-            $fatura->delete();
-
-            DB::commit();
-
-            return redirect()->route('faturamento.index')->with('success', 'Fatura cancelada e apontamentos liberados.');
+            return redirect()->route('faturamento.index')->with('success', 'Fatura cancelada com sucesso no sistema e no Asaas.');
         } catch (\Exception $e) {
-            DB::rollBack();
-
-            return back()->with('error', 'Erro ao cancelar a fatura: '.$e->getMessage());
+            Log::error('Erro ao cancelar a fatura localmente após sucesso no Asaas: '.$e->getMessage());
+            return back()->with('error', 'A cobrança foi cancelada no Asaas, mas ocorreu um erro ao atualizar o sistema local. Por favor, verifique.');
         }
     }
 }

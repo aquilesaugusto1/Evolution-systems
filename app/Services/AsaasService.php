@@ -19,16 +19,12 @@ class AsaasService
         ])->baseUrl(config('asaas.api_url'));
     }
 
-    /**
-     * Cria ou recupera um cliente no Asaas.
-     */
     public function criarOuRecuperarCliente(EmpresaParceira $empresa): ?string
     {
         if ($empresa->asaas_customer_id) {
             return $empresa->asaas_customer_id;
         }
 
-        // CORREÇÃO: Usando o campo 'nome_empresa' que é o correto.
         $nomeCliente = $empresa->nome_empresa;
         if (empty($nomeCliente)) {
             throw new \InvalidArgumentException("O cliente (ID: {$empresa->id}) não possui um 'Nome da Empresa' cadastrado. Por favor, atualize o cadastro.");
@@ -63,7 +59,6 @@ class AsaasService
             return null;
 
         } catch (\Exception $e) {
-            // Se a exceção for a que nós criamos, relança ela para o controller mostrar a mensagem bonita.
             if ($e instanceof \InvalidArgumentException) {
                 throw $e;
             }
@@ -72,9 +67,6 @@ class AsaasService
         }
     }
 
-    /**
-     * Cria uma cobrança PIX no Asaas.
-     */
     public function criarCobranca(Fatura $fatura): ?array
     {
         $clienteId = $this->criarOuRecuperarCliente($fatura->contrato->empresaParceira);
@@ -102,6 +94,31 @@ class AsaasService
         } catch (\Exception $e) {
             Log::error('Exceção ao criar cobrança no Asaas: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    public function cancelarCobranca(string $paymentId): bool
+    {
+        try {
+            $response = $this->http->delete("/payments/{$paymentId}");
+
+            Log::channel('stack')->info('ASAAS LOG - Tentativa de cancelamento:', [
+                'payment_id' => $paymentId,
+                'status_code' => $response->status(),
+                'response_body' => $response->json() ?? $response->body(),
+            ]);
+
+            // Apenas um status 2xx (successful) significa que o cancelamento funcionou.
+            if ($response->successful()) {
+                return true;
+            }
+
+            // Qualquer outro status é uma falha.
+            return false;
+
+        } catch (\Exception $e) {
+            Log::channel('stack')->error("Exceção GERAL ao cancelar cobrança {$paymentId} no Asaas: " . $e->getMessage());
+            return false;
         }
     }
 }

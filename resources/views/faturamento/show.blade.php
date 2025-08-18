@@ -76,7 +76,7 @@
                         </div>
                         <div class="mt-4 flex gap-2">
                              @if($fatura->status !== \App\Enums\FaturaStatusEnum::CANCELADA)
-                                <form action="{{ route('faturamento.destroy', $fatura) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja cancelar esta fatura? Os apontamentos serão liberados para faturamento futuro.');">
+                                <form action="{{ route('faturamento.destroy', $fatura) }}" method="POST">
                                     @csrf
                                     @method('DELETE')
                                     <x-danger-button>Cancelar Fatura</x-danger-button>

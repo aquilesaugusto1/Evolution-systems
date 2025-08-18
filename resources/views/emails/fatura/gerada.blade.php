@@ -88,7 +88,7 @@
     <div class="email-container">
         <div class="email-header">
             <!-- Coloque a URL pública da sua logo aqui -->
-            <img src="https://www.evolutionsystems.com.br/assets/img/logo.png" alt="Logo Evolution Systems">
+            <link rel="icon" type="image/webp" href="{{ asset('images/logoevo.png') }}">
         </div>
         <div class="email-body">
             <h1>Sua fatura está pronta!</h1>
