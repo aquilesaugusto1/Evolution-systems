@@ -106,7 +106,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $apontamento->data_apontamento->format('d/m/Y') }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $apontamento->consultor->nome }} {{ $apontamento->consultor->sobrenome }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-500">{{ $apontamento->descricao }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono">{{ number_format($apontamento->horas_gastas, 2, ',', '.') }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono">{{ $apontamento->horas_gastas }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
