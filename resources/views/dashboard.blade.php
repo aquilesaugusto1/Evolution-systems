@@ -126,10 +126,6 @@
                 },
                 savePreferences() {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                    
-                    // LINHA DE DEBUG ADICIONADA
-                    alert('Token encontrado: ' + csrfToken);
-
                     const layout = [
                         Array.from(document.getElementById('modal-coluna-1').children).map(el => ({ id: el.dataset.id, component: el.dataset.component })),
                         Array.from(document.getElementById('modal-coluna-2').children).map(el => ({ id: el.dataset.id, component: el.dataset.component }))
@@ -145,7 +141,8 @@
                     })
                     .then(response => {
                         if (!response.ok) {
-                           throw new Error('Erro na resposta do servidor: ' + response.status);
+                           // Se a resposta não for OK, tentamos ler como JSON para ver o erro de validação
+                           return response.json().then(err => { throw err; });
                         }
                         return response.json();
                     })
@@ -153,12 +150,20 @@
                         if(data.success) {
                             window.location.reload();
                         } else {
-                            alert('Ocorreu um erro ao salvar a dashboard.');
+                            alert('Ocorreu um erro ao salvar: ' + (data.message || 'Erro desconhecido.'));
                         }
                     })
                     .catch((error) => {
                         console.error('Erro no fetch:', error);
-                        alert('Ocorreu um erro de comunicação. Verifique o console do navegador para mais detalhes.');
+                        // Mostra os erros de validação de forma mais clara
+                        let errorMessage = 'Ocorreu um erro de comunicação.';
+                        if (error.errors) {
+                            errorMessage = 'Erros de validação:\n';
+                            for (const key in error.errors) {
+                                errorMessage += `- ${error.errors[key].join(', ')}\n`;
+                            }
+                        }
+                        alert(errorMessage);
                     });
                 }
             }
