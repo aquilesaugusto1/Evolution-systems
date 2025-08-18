@@ -18,7 +18,7 @@
                                     <option value="">Selecione um contrato</option>
                                     @foreach($contratos as $contrato)
                                         <option value="{{ $contrato->id }}" @selected(request()->query('contrato_id') == $contrato->id)>
-                                            {{ $contrato->numero_contrato }} - {{ $contrato->empresaParceira->nome_fantasia }}
+                                            {{ $contrato->numero_contrato }} - {{ $contrato->nome }} - {{ $contrato->empresaParceira->nome_fantasia }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -69,6 +69,17 @@
                                         <dd class="mt-1 text-sm font-bold text-gray-900 sm:mt-0 sm:col-span-2 font-mono">{{ 'R$ ' . number_format($valorTotal, 2, ',', '.') }}</dd>
                                     </div>
                                 </dl>
+                            </div>
+
+                            <div class="mt-6">
+                                <x-input-label for="billing_type" :value="__('Formas de Pagamento')" />
+                                <select id="billing_type" name="billing_type" class="mt-1 block w-full md:w-1/3 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                                    <option value="UNDEFINED">PIX, Boleto e Cartão</option>
+                                    <option value="PIX">Apenas PIX</option>
+                                    <option value="BOLETO">Apenas Boleto</option>
+                                    <option value="CREDIT_CARD">Apenas Cartão de Crédito</option>
+                                </select>
+                                <p class="mt-2 text-sm text-gray-500">Selecione as formas de pagamento a serem oferecidas ao cliente.</p>
                             </div>
 
                             <div class="mt-6 overflow-x-auto">

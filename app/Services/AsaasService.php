@@ -67,7 +67,10 @@ class AsaasService
         }
     }
 
-    public function criarCobranca(Fatura $fatura): ?array
+    /**
+     * Cria uma cobrança no Asaas com o tipo especificado.
+     */
+    public function criarCobranca(Fatura $fatura, string $billingType): ?array
     {
         $clienteId = $this->criarOuRecuperarCliente($fatura->contrato->empresaParceira);
 
@@ -76,19 +79,21 @@ class AsaasService
         }
 
         try {
-            $response = $this->http->post('/payments', [
+            $payload = [
                 'customer' => $clienteId,
-                'billingType' => 'PIX',
+                'billingType' => $billingType,
                 'value' => $fatura->valor_total,
                 'dueDate' => $fatura->data_vencimento->format('Y-m-d'),
                 'description' => 'Fatura de Serviços - ' . $fatura->numero_fatura,
-            ]);
+            ];
+
+            $response = $this->http->post('/payments', $payload);
 
             if ($response->successful()) {
                 return $response->json();
             }
 
-            Log::error('Falha ao criar cobrança no Asaas: ' . $response->body());
+            Log::error('Falha ao criar cobrança no Asaas: ' . $response->body(), ['payload' => $payload]);
             return null;
 
         } catch (\Exception $e) {
@@ -108,12 +113,10 @@ class AsaasService
                 'response_body' => $response->json() ?? $response->body(),
             ]);
 
-            // Apenas um status 2xx (successful) significa que o cancelamento funcionou.
             if ($response->successful()) {
                 return true;
             }
-
-            // Qualquer outro status é uma falha.
+            
             return false;
 
         } catch (\Exception $e) {

@@ -34,7 +34,7 @@ class FaturamentoController extends Controller
 
     public function create(Request $request): View
     {
-        $contratos = Contrato::where('status', 'Ativo')->orderBy('numero_contrato')->get();
+        $contratos = Contrato::with('empresaParceira')->where('status', 'Ativo')->orderBy('numero_contrato')->get();
         $selectedContratoId = $request->query('contrato_id');
         $apontamentos = collect();
         $totalHoras = '00:00';
@@ -77,6 +77,7 @@ class FaturamentoController extends Controller
             'data_fim' => 'required|date|after_or_equal:data_inicio',
             'apontamento_ids' => 'required|array|min:1',
             'apontamento_ids.*' => 'exists:apontamentos,id',
+            'billing_type' => 'required|string|in:PIX,BOLETO,CREDIT_CARD,UNDEFINED',
         ]);
 
         try {
@@ -101,11 +102,12 @@ class FaturamentoController extends Controller
                     'data_vencimento' => now()->addDays(15),
                     'valor_total' => $valorTotalFatura,
                     'status' => FaturaStatusEnum::EM_ABERTO,
+                    'billing_type' => $validated['billing_type'],
                 ]);
 
                 Apontamento::whereIn('id', $validated['apontamento_ids'])->update(['fatura_id' => $fatura->id]);
 
-                $cobrancaAsaas = $asaasService->criarCobranca($fatura);
+                $cobrancaAsaas = $asaasService->criarCobranca($fatura, $validated['billing_type']);
 
                 if (! $cobrancaAsaas) {
                     throw new \Exception('Não foi possível gerar a cobrança no gateway de pagamento.');
@@ -116,6 +118,8 @@ class FaturamentoController extends Controller
                     'asaas_payment_url' => $cobrancaAsaas['invoiceUrl'],
                     'asaas_pix_qrcode' => $cobrancaAsaas['pixQrCode']['encodedImage'] ?? null,
                     'asaas_pix_payload' => $cobrancaAsaas['pixQrCode']['payload'] ?? null,
+                    'asaas_boleto_url' => $cobrancaAsaas['bankSlipUrl'] ?? null,
+                    'asaas_boleto_barcode' => $cobrancaAsaas['identificationField'] ?? null,
                 ]);
 
                 return $fatura;
@@ -176,21 +180,18 @@ class FaturamentoController extends Controller
 
     public function destroy(Fatura $fatura, AsaasService $asaasService): RedirectResponse
     {
-        // 1. Primeiro, tenta cancelar no Asaas
         if ($fatura->asaas_payment_id) {
             $canceladoAsaas = $asaasService->cancelarCobranca($fatura->asaas_payment_id);
             if (! $canceladoAsaas) {
-                // Se falhar, para tudo e avisa o usuário.
                 return back()->with('error', 'Não foi possível cancelar a cobrança no gateway de pagamento. A fatura não foi alterada. Verifique os logs para mais detalhes.');
             }
         }
 
-        // 2. Se o cancelamento no Asaas deu certo (ou não era necessário), prossegue com as alterações locais
         try {
             DB::transaction(function () use ($fatura) {
                 Apontamento::where('fatura_id', $fatura->id)->update(['fatura_id' => null]);
                 $fatura->update(['status' => FaturaStatusEnum::CANCELADA]);
-                $fatura->delete(); // Soft delete
+                $fatura->delete();
             });
 
             return redirect()->route('faturamento.index')->with('success', 'Fatura cancelada com sucesso no sistema e no Asaas.');

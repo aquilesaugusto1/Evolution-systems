@@ -19,8 +19,9 @@
         .items-table .text-right { text-align: right; }
         .items-table .text-center { text-align: center; }
         .summary-section { margin-top: 30px; page-break-inside: avoid; }
-        .pix-section { margin-top: 30px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 5px; page-break-inside: avoid; }
-        .pix-section h3 { margin-top: 0; }
+        .payment-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; page-break-inside: avoid; }
+        .payment-method { margin-bottom: 20px; }
+        .payment-method h4 { margin-top: 0; margin-bottom: 10px; font-size: 13px; color: #2d3748; }
         .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; color: #a0aec0; padding: 20px; border-top: 1px solid #e2e8f0; }
         
         /* Helpers */
@@ -32,6 +33,7 @@
         .text-gray { color: #718096; }
         .text-dark { color: #2d3748; }
         .font-mono { font-family: 'Courier New', Courier, monospace; }
+        .barcode { font-size: 11px; word-wrap: break-word; background-color: #f7fafc; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
@@ -53,7 +55,7 @@
 
         <div class="details-section">
             <h3>Cobrança para</h3>
-            <p><strong class="text-dark">{{ $fatura->contrato->empresaParceira->nome_fantasia }}</strong></p>
+            <p><strong class="text-dark">{{ $fatura->contrato->empresaParceira->nome_empresa }}</strong></p>
             @if($fatura->contrato->empresaParceira->razao_social)
                 <p class="text-gray">{{ $fatura->contrato->empresaParceira->razao_social }}</p>
             @endif
@@ -104,18 +106,39 @@
             </div>
         </div>
 
-        @if($fatura->asaas_payment_id && $fatura->asaas_pix_qrcode)
-        <div class="pix-section clearfix">
-            <h3>Pague com PIX</h3>
-            <div class="float-left" style="width: 40%;">
-                <img src="data:image/png;base64,{{ $fatura->asaas_pix_qrcode }}" alt="QR Code PIX" style="width: 150px; height: 150px;">
+        @if($fatura->asaas_payment_id)
+        <div class="payment-section">
+            <h3>Informações para Pagamento</h3>
+
+            @if($fatura->asaas_pix_qrcode)
+            <div class="payment-method clearfix">
+                <h4>Pague com PIX</h4>
+                <div class="float-left" style="width: 35%;">
+                    <img src="data:image/png;base64,{{ $fatura->asaas_pix_qrcode }}" alt="QR Code PIX" style="width: 140px; height: 140px;">
+                </div>
+                <div class="float-right" style="width: 65%;">
+                    <p style="margin-top:0;">Use o QR Code ou o código abaixo para pagar via PIX:</p>
+                    <p class="font-mono barcode">
+                        {{ $fatura->asaas_pix_payload }}
+                    </p>
+                </div>
             </div>
-            <div class="float-right" style="width: 60%;">
-                <p>Use o QR Code ou o código abaixo para pagar via PIX:</p>
-                <p class="font-mono" style="font-size: 10px; word-wrap: break-word; background-color: #f7fafc; padding: 10px; border-radius: 4px;">
-                    {{ $fatura->asaas_pix_payload }}
-                </p>
+            @endif
+
+            @if($fatura->asaas_boleto_barcode)
+            <div class="payment-method">
+                <h4>Pague com Boleto</h4>
+                <p>Linha Digitável:</p>
+                <p class="font-mono barcode">{{ $fatura->asaas_boleto_barcode }}</p>
             </div>
+            @endif
+            
+            @if($fatura->billing_type === 'UNDEFINED' && !$fatura->asaas_pix_qrcode && !$fatura->asaas_boleto_barcode)
+            <div class="payment-method">
+                <h4>Múltiplas Formas de Pagamento</h4>
+                <p>Acesse o link de pagamento seguro enviado ao seu e-mail para escolher entre PIX, Boleto ou Cartão de Crédito.</p>
+            </div>
+            @endif
         </div>
         @endif
 
