@@ -6,12 +6,14 @@ use App\Models\Agenda;
 use App\Models\Apontamento;
 use App\Models\Contrato;
 use App\Models\EmpresaParceira;
+use App\Models\Fatura;
 use App\Models\User;
 use App\Policies\AgendaPolicy;
 use App\Policies\ApontamentoPolicy;
 use App\Policies\ColaboradorPolicy;
 use App\Policies\ContratoPolicy;
 use App\Policies\EmpresaParceiraPolicy;
+use App\Policies\FaturaPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -27,6 +29,7 @@ class AuthServiceProvider extends ServiceProvider
         User::class => ColaboradorPolicy::class,
         Agenda::class => AgendaPolicy::class,
         Apontamento::class => ApontamentoPolicy::class,
+        Fatura::class => FaturaPolicy::class,
     ];
 
     /**
