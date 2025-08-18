@@ -53,6 +53,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite
         Route::get('faturamento/create', [FaturamentoController::class, 'create'])->name('faturamento.create');
         Route::post('faturamento', [FaturamentoController::class, 'store'])->name('faturamento.store');
         Route::get('faturamento/{fatura}', [FaturamentoController::class, 'show'])->name('faturamento.show');
+        Route::get('faturamento/{fatura}/pdf', [FaturamentoController::class, 'downloadPdf'])->name('faturamento.pdf');
         Route::delete('faturamento/{fatura}', [FaturamentoController::class, 'destroy'])->name('faturamento.destroy');
     });
 

@@ -8,8 +8,10 @@ use App\Models\Apontamento;
 use App\Models\Contrato;
 use App\Models\Fatura;
 use App\Traits\ConvertsTime;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -112,21 +114,29 @@ class FaturamentoController extends Controller
             return back()->with('error', 'Erro ao gerar a fatura: '.$e->getMessage());
         }
 
-        // Envio do e-mail após a transação ser bem-sucedida
         if ($fatura) {
             try {
                 $fatura->load('contrato.empresaParceira', 'apontamentos.consultor');
-                $contatoComercial = $fatura->contrato->empresaParceira->contato_comercial;
+                $empresa = $fatura->contrato->empresaParceira;
+                $contatoFinanceiro = $empresa->contato_financeiro;
+                $contatoComercial = $empresa->contato_comercial;
 
-                if (isset($contatoComercial['email']) && filter_var($contatoComercial['email'], FILTER_VALIDATE_EMAIL)) {
-                    Mail::to($contatoComercial['email'])->send(new FaturaGeradaMail($fatura));
-                    Log::info("E-mail de fatura {$fatura->numero_fatura} enviado para {$contatoComercial['email']}");
+                $emailDestino = null;
+                if (isset($contatoFinanceiro['email']) && filter_var($contatoFinanceiro['email'], FILTER_VALIDATE_EMAIL)) {
+                    $emailDestino = $contatoFinanceiro['email'];
+                } elseif (isset($contatoComercial['email']) && filter_var($contatoComercial['email'], FILTER_VALIDATE_EMAIL)) {
+                    $emailDestino = $contatoComercial['email'];
+                }
+
+                if ($emailDestino) {
+                    Mail::to($emailDestino)->send(new FaturaGeradaMail($fatura));
+                    Log::info("E-mail de fatura {$fatura->numero_fatura} enviado para {$emailDestino}");
 
                     return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada e enviada ao cliente com sucesso!');
                 } else {
-                    Log::warning("Fatura {$fatura->numero_fatura} gerada, mas o cliente não possui um e-mail comercial válido para envio.");
+                    Log::warning("Fatura {$fatura->numero_fatura} gerada, mas o cliente não possui um e-mail (financeiro ou comercial) válido para envio.");
 
-                    return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso, mas não foi enviada por e-mail (cliente sem contato comercial válido).');
+                    return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso, mas não foi enviada por e-mail (cliente sem contato válido).');
                 }
             } catch (\Exception $e) {
                 Log::error("Falha ao enviar e-mail da fatura {$fatura->numero_fatura}: ".$e->getMessage());
@@ -143,6 +153,14 @@ class FaturamentoController extends Controller
         $fatura->load('contrato.empresaParceira', 'apontamentos.consultor', 'creator');
 
         return view('faturamento.show', compact('fatura'));
+    }
+
+    public function downloadPdf(Fatura $fatura): Response
+    {
+        $fatura->load('contrato.empresaParceira', 'apontamentos.consultor');
+        $pdf = Pdf::loadView('faturamento.pdf', compact('fatura'));
+
+        return $pdf->download('fatura-'.$fatura->numero_fatura.'.pdf');
     }
 
     public function destroy(Fatura $fatura): RedirectResponse
