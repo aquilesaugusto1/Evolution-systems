@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Agenda;
 use App\Models\Apontamento;
 use App\Models\User;
+use App\Notifications\ApontamentoParaAprovacao;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use LogicException;
@@ -42,7 +44,7 @@ class ApontamentoController extends Controller
         if ($user->isConsultor()) {
             $query->where('consultor_id', $user->id);
         } elseif ($user->isTechLead()) {
-            $consultor_ids = $user->consultoresLiderados()->pluck('users.id');
+            $consultor_ids = $user->consultoresLiderados()->pluck('usuarios.id');
             $query->whereIn('consultor_id', $consultor_ids);
         }
 
@@ -97,6 +99,20 @@ class ApontamentoController extends Controller
 
         $apontamento->save();
 
+        // ** GATILHO DA NOTIFICAÇÃO ATUALIZADO **
+        $consultor = $apontamento->consultor;
+        if ($consultor) {
+            $techLeads = $consultor->techLeads;
+            $admins = User::where('funcao', 'admin')->get();
+            
+            // Junta as duas coleções e remove duplicados para não notificar duas vezes
+            $destinatarios = $techLeads->merge($admins)->unique('id');
+
+            if ($destinatarios->isNotEmpty()) {
+                Notification::send($destinatarios, new ApontamentoParaAprovacao($apontamento, $consultor));
+            }
+        }
+
         return response()->json(['message' => 'Apontamento salvo e enviado para aprovação!']);
     }
 
@@ -105,27 +121,27 @@ class ApontamentoController extends Controller
         return $agendas->map(function (Agenda $agenda) {
             $apontamento = $agenda->apontamento;
             $status = 'Não Apontado';
-            $color = '#6B7280'; 
+            $color = '#6B7280'; // Cinza
 
             if ($agenda->status === 'Cancelada') {
                 $status = 'Cancelada';
-                $color = '#EF4444'; 
+                $color = '#EF4444'; // Vermelho
             } elseif ($apontamento) {
                 $status = $apontamento->status;
                 switch ($status) {
                     case 'Pendente':
-                        $color = '#F59E0B';
-                        break; 
+                        $color = '#F59E0B'; // Ambar
+                        break;
                     case 'Aprovado':
-                        $color = '#10B981';
-                        break; 
+                        $color = '#10B981'; // Verde
+                        break;
                     case 'Rejeitado':
-                        $color = '#EF4444';
-                        break; 
+                        $color = '#EF4444'; // Vermelho
+                        break;
                 }
             } else {
                 $status = 'Agendada';
-                $color = '#3B82F6'; 
+                $color = '#3B82F6'; // Azul
             }
 
             return [
