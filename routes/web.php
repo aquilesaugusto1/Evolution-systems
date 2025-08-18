@@ -6,6 +6,7 @@ use App\Http\Controllers\AprovacaoController;
 use App\Http\Controllers\ColaboradorController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardPreferenceController; // Importado
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EmpresaParceiraController;
 use App\Http\Controllers\FaturamentoController;
@@ -27,6 +28,8 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite::class])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/preferences', [DashboardPreferenceController::class, 'update'])->name('dashboard.preferences.update'); // Adicionado
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

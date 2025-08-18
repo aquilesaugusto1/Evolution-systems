@@ -130,4 +130,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Fatura::class, 'created_by');
     }
+
+    /**
+     * @return HasOne<DashboardPreference, User>
+     */
+    public function dashboardPreference(): HasOne
+    {
+        return $this->hasOne(DashboardPreference::class);
+    }
 }
