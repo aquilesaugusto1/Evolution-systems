@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'Evolution') }}</title>
 
         <link rel="icon" type="image/webp" href="{{ asset('images/favicon.webp') }}">
 
@@ -25,9 +25,15 @@
             <div class="flex-1 flex flex-col">
                 @include('layouts.navigation')
 
+                @if (isset($header))
+                    <header class="bg-white shadow-sm">
+                        <div class="max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endif
                 <main class="flex-1">
                     <div class="py-8 px-4 sm:px-6 lg:px-8">
-                        <!-- Session Messages -->
                         @if (session('success') || session('error') || $errors->any())
                             @if ($message = session('success'))
                                 <div class="mb-6 bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-r-lg" role="alert">
