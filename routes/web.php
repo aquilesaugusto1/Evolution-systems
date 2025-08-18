@@ -6,10 +6,11 @@ use App\Http\Controllers\AprovacaoController;
 use App\Http\Controllers\ColaboradorController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DashboardPreferenceController; // Importado
+use App\Http\Controllers\DashboardPreferenceController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EmpresaParceiraController;
 use App\Http\Controllers\FaturamentoController;
+use App\Http\Controllers\MuralController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\SugestaoController;
@@ -28,10 +29,11 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite::class])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::post('/dashboard/preferences', [DashboardPreferenceController::class, 'update'])->name('dashboard.preferences.update'); // Adicionado
+    Route::post('/dashboard/preferences', [DashboardPreferenceController::class, 'update'])->name('dashboard.preferences.update');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/skills', [ProfileController::class, 'updateSkills'])->name('profile.skills.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/apontamentos', [ApontamentoController::class, 'index'])->name('apontamentos.index');
@@ -50,6 +52,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite
     Route::resource('empresas', EmpresaParceiraController::class)->except(['destroy']);
     Route::resource('contratos', ContratoController::class)->except(['destroy']);
     Route::resource('colaboradores', ColaboradorController::class)->except(['destroy'])->parameters(['colaboradores' => 'colaborador']);
+
+    Route::get('/mural', [MuralController::class, 'index'])->name('mural.index');
 
     Route::middleware('role:admin,coordenador_operacoes')->group(function () {
         Route::get('faturamento', [FaturamentoController::class, 'index'])->name('faturamento.index');

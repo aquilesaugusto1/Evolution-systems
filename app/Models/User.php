@@ -35,6 +35,9 @@ class User extends Authenticatable
         'endereco',
         'cargo',
         'nivel',
+        'foto_url',
+        'bio',
+        'redes_sociais',
         'dados_empresa_prestador',
         'dados_bancarios',
         'termos_aceite_em',
@@ -54,6 +57,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'endereco' => 'array',
+            'redes_sociais' => 'array',
             'dados_empresa_prestador' => 'array',
             'dados_bancarios' => 'array',
             'data_nascimento' => 'date',
@@ -100,6 +104,13 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Contrato::class, 'contrato_usuario', 'usuario_id', 'contrato_id')
             ->withPivot('funcao_contrato')
+            ->withTimestamps();
+    }
+
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'skill_user')
+            ->withPivot('nivel')
             ->withTimestamps();
     }
 
