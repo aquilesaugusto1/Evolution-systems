@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Apontamento;
 use App\Models\User;
+use App\Notifications\ApontamentoStatusAlterado;
+use App\Notifications\ContratoHorasBaixas;
 use App\Traits\ConvertsTime;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
 use LogicException;
 
@@ -43,7 +46,7 @@ class AprovacaoController extends Controller
     {
         $this->authorize('approve', $apontamento);
 
-        $apontamento->loadMissing(['agenda', 'contrato']);
+        $apontamento->loadMissing(['agenda', 'contrato', 'consultor']);
 
         try {
             DB::transaction(function () use ($apontamento) {
@@ -66,8 +69,15 @@ class AprovacaoController extends Controller
                     
                     $contrato->baseline_horas_mes = self::decimalToTime($novoSaldoDecimal);
                     $contrato->save();
+
+                    // ** GATILHO DA NOTIFICAÇÃO DE SALDO DE HORAS **
+                    $this->verificarSaldoContrato($contrato);
                 }
             });
+
+            if ($apontamento->consultor) {
+                $apontamento->consultor->notify(new ApontamentoStatusAlterado($apontamento));
+            }
 
             $message = $apontamento->faturavel
                 ? 'Apontamento aprovado e faturado com sucesso!'
@@ -77,7 +87,6 @@ class AprovacaoController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Erro ao aprovar apontamento: '.$e->getMessage());
-
             return back()->withErrors('Ocorreu um erro inesperado ao tentar aprovar o apontamento.');
         }
     }
@@ -85,8 +94,8 @@ class AprovacaoController extends Controller
     public function rejeitar(Request $request, Apontamento $apontamento): RedirectResponse
     {
         $this->authorize('approve', $apontamento);
-
         $validated = $request->validate(['motivo_rejeicao' => 'required|string|max:500']);
+        $apontamento->loadMissing('consultor');
 
         $apontamento->status = 'Rejeitado';
         $apontamento->faturavel = false;
@@ -95,6 +104,34 @@ class AprovacaoController extends Controller
         $apontamento->data_aprovacao = now();
         $apontamento->save();
 
+        if ($apontamento->consultor) {
+            $apontamento->consultor->notify(new ApontamentoStatusAlterado($apontamento));
+        }
+
         return redirect()->route('aprovacoes.index')->with('success', 'Apontamento rejeitado com sucesso.');
+    }
+
+    /**
+     * Verifica o saldo de horas de um contrato e dispara notificação se estiver baixo.
+     */
+    private function verificarSaldoContrato($contrato): void
+    {
+        $horasOriginais = (float) $contrato->baseline_horas_original_decimal;
+        if ($horasOriginais <= 0) {
+            return;
+        }
+
+        $horasRestantes = (float) $contrato->baseline_horas_mes_decimal;
+        $percentualRestante = ($horasRestantes / $horasOriginais) * 100;
+
+        // Define o limite em 20%
+        $limite = 20.0;
+
+        if ($percentualRestante <= $limite) {
+            $admins = User::where('funcao', 'admin')->get();
+            if ($admins->isNotEmpty()) {
+                Notification::send($admins, new ContratoHorasBaixas($contrato, $percentualRestante));
+            }
+        }
     }
 }
