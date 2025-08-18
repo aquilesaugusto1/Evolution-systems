@@ -90,6 +90,44 @@
                 </div>
             </div>
 
+            @if($fatura->asaas_payment_id)
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Informações de Pagamento</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                    <div class="md:col-span-1 flex flex-col items-center">
+                        <h4 class="font-semibold text-gray-800 mb-2">Pagar com PIX</h4>
+                        @if($fatura->asaas_pix_qrcode)
+                            <img src="data:image/png;base64,{{ $fatura->asaas_pix_qrcode }}" alt="QR Code PIX" class="border rounded-lg p-2">
+                        @else
+                            <p class="text-sm text-gray-500">QR Code não disponível.</p>
+                        @endif
+                    </div>
+                    <div class="md:col-span-2">
+                        @if($fatura->asaas_pix_payload)
+                            <div x-data="{ copied: false }" class="mb-4">
+                                <label for="pix_payload" class="block text-sm font-medium text-gray-700">PIX Copia e Cola</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <textarea id="pix_payload" rows="3" class="flex-1 block w-full rounded-none rounded-l-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" readonly>{{ $fatura->asaas_pix_payload }}</textarea>
+                                    <button @click="navigator.clipboard.writeText('{{ $fatura->asaas_pix_payload }}'); copied = true; setTimeout(() => copied = false, 2000)" class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 bg-gray-50 text-gray-500 rounded-r-md hover:bg-gray-100">
+                                        <span x-show="!copied">Copiar</span>
+                                        <span x-show="copied" class="text-green-600">Copiado!</span>
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                        @if($fatura->asaas_payment_url)
+                            <div>
+                                <h4 class="font-semibold text-gray-800 mb-2">Outras Formas</h4>
+                                <a href="{{ $fatura->asaas_payment_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 hover:underline">
+                                    Acessar Página de Pagamento &rarr;
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
                  <h3 class="text-lg font-medium text-gray-900 mb-4">Apontamentos Incluídos</h3>
                  <div class="overflow-x-auto">

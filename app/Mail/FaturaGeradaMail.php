@@ -42,7 +42,7 @@ class FaturaGeradaMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'emails.fatura.gerada',
             with: [
-                'nomeCliente' => $this->fatura->contrato->empresaParceira->nome_empresa,
+                'nomeCliente' => $this->fatura->contrato->empresaParceira->nome_fantasia,
                 'numeroFatura' => $this->fatura->numero_fatura,
                 'valorFatura' => number_format($this->fatura->valor_total, 2, ',', '.'),
                 'vencimentoFatura' => $this->fatura->data_vencimento->format('d/m/Y'),

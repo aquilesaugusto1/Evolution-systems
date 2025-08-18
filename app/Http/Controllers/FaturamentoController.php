@@ -7,6 +7,7 @@ use App\Mail\FaturaGeradaMail;
 use App\Models\Apontamento;
 use App\Models\Contrato;
 use App\Models\Fatura;
+use App\Services\AsaasService;
 use App\Traits\ConvertsTime;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -68,7 +69,7 @@ class FaturamentoController extends Controller
         return view('faturamento.create', compact('contratos', 'apontamentos', 'totalHoras', 'valorTotal', 'contratoSelecionado'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AsaasService $asaasService): RedirectResponse
     {
         $validated = $request->validate([
             'contrato_id' => 'required|exists:contratos,id',
@@ -78,75 +79,93 @@ class FaturamentoController extends Controller
             'apontamento_ids.*' => 'exists:apontamentos,id',
         ]);
 
-        $fatura = null;
         try {
-            DB::beginTransaction();
+            $fatura = DB::transaction(function () use ($validated, $asaasService) {
+                $contrato = Contrato::with('empresaParceira')->findOrFail($validated['contrato_id']);
+                $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
 
-            $contrato = Contrato::with('empresaParceira')->findOrFail($validated['contrato_id']);
-            $apontamentos = Apontamento::whereIn('id', $validated['apontamento_ids'])->get();
+                // CORREÇÃO: Garante que a soma das horas seja sempre positiva usando abs().
+                $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
+                    return $carry + abs($item->horas_gastas_decimal);
+                }, 0);
 
-            $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
-                return $carry + abs($item->horas_gastas_decimal);
-            }, 0);
+                $valorTotalFatura = round($totalHorasDecimal * ($contrato->valor_hora ?? 0), 2);
 
-            $valorTotalFatura = $totalHorasDecimal * ($contrato->valor_hora ?? 0);
-            $anoMes = now()->format('Y-m');
-            $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
-            $novoNumero = 'FAT-'.$anoMes.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
+                $anoMes = now()->format('Y-m');
+                $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
+                $novoNumero = 'FAT-'.$anoMes.'-'.str_pad((string) ($ultimoNumero + 1), 4, '0', STR_PAD_LEFT);
 
-            $fatura = Fatura::create([
-                'contrato_id' => $contrato->id,
-                'numero_fatura' => $novoNumero,
-                'data_emissao' => now(),
-                'data_vencimento' => now()->addDays(15),
-                'valor_total' => $valorTotalFatura,
-                'status' => FaturaStatusEnum::EM_ABERTO,
-            ]);
+                // 1. Cria a fatura local
+                $fatura = Fatura::create([
+                    'contrato_id' => $contrato->id,
+                    'numero_fatura' => $novoNumero,
+                    'data_emissao' => now(),
+                    'data_vencimento' => now()->addDays(15),
+                    'valor_total' => $valorTotalFatura,
+                    'status' => FaturaStatusEnum::EM_ABERTO,
+                ]);
 
-            Apontamento::whereIn('id', $validated['apontamento_ids'])->update(['fatura_id' => $fatura->id]);
+                // 2. Vincula os apontamentos à fatura
+                Apontamento::whereIn('id', $validated['apontamento_ids'])->update(['fatura_id' => $fatura->id]);
 
-            DB::commit();
+                // 3. Cria a cobrança no Asaas
+                $cobrancaAsaas = $asaasService->criarCobranca($fatura);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Erro ao gerar a fatura: '.$e->getMessage());
-
-            return back()->with('error', 'Erro ao gerar a fatura: '.$e->getMessage());
-        }
-
-        if ($fatura) {
-            try {
-                $fatura->load('contrato.empresaParceira', 'apontamentos.consultor');
-                $empresa = $fatura->contrato->empresaParceira;
-                $contatoFinanceiro = $empresa->contato_financeiro;
-                $contatoComercial = $empresa->contato_comercial;
-
-                $emailDestino = null;
-                if (isset($contatoFinanceiro['email']) && filter_var($contatoFinanceiro['email'], FILTER_VALIDATE_EMAIL)) {
-                    $emailDestino = $contatoFinanceiro['email'];
-                } elseif (isset($contatoComercial['email']) && filter_var($contatoComercial['email'], FILTER_VALIDATE_EMAIL)) {
-                    $emailDestino = $contatoComercial['email'];
+                if (! $cobrancaAsaas) {
+                    throw new \Exception('Não foi possível gerar a cobrança no gateway de pagamento.');
                 }
 
-                if ($emailDestino) {
-                    Mail::to($emailDestino)->send(new FaturaGeradaMail($fatura));
-                    Log::info("E-mail de fatura {$fatura->numero_fatura} enviado para {$emailDestino}");
+                // 4. Atualiza a fatura local com os dados do Asaas
+                $fatura->update([
+                    'asaas_payment_id' => $cobrancaAsaas['id'],
+                    'asaas_payment_url' => $cobrancaAsaas['invoiceUrl'],
+                    'asaas_pix_qrcode' => $cobrancaAsaas['pixQrCode']['encodedImage'] ?? null,
+                    'asaas_pix_payload' => $cobrancaAsaas['pixQrCode']['payload'] ?? null,
+                ]);
 
-                    return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada e enviada ao cliente com sucesso!');
-                } else {
-                    Log::warning("Fatura {$fatura->numero_fatura} gerada, mas o cliente não possui um e-mail (financeiro ou comercial) válido para envio.");
+                return $fatura;
+            });
 
-                    return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso, mas não foi enviada por e-mail (cliente sem contato válido).');
-                }
-            } catch (\Exception $e) {
-                Log::error("Falha ao enviar e-mail da fatura {$fatura->numero_fatura}: ".$e->getMessage());
-
-                return redirect()->route('faturamento.show', $fatura)->with('error', 'Fatura gerada, mas houve um erro ao enviar o e-mail.');
+            // 5. Se tudo deu certo, envia o e-mail
+            if ($fatura) {
+                $this->enviarEmailFatura($fatura);
+                return redirect()->route('faturamento.show', $fatura)->with('success', 'Fatura gerada com sucesso e registrada no Asaas!');
             }
+        } catch (\Exception $e) {
+            Log::error('Erro ao gerar a fatura e registrar no Asaas: '.$e->getMessage());
+            return back()->with('error', 'Erro ao gerar a fatura: '.$e->getMessage())->withInput();
         }
 
-        return back()->with('error', 'Ocorreu um erro inesperado e a fatura não pôde ser processada.');
+        return back()->with('error', 'Ocorreu um erro inesperado e a fatura não pôde ser processada.')->withInput();
     }
+
+    private function enviarEmailFatura(Fatura $fatura)
+    {
+        try {
+            $fatura->load('contrato.empresaParceira');
+            $empresa = $fatura->contrato->empresaParceira;
+            $contatoFinanceiro = $empresa->contato_financeiro;
+            $contatoComercial = $empresa->contato_comercial;
+
+            $emailDestino = null;
+            if (isset($contatoFinanceiro['email']) && filter_var($contatoFinanceiro['email'], FILTER_VALIDATE_EMAIL)) {
+                $emailDestino = $contatoFinanceiro['email'];
+            } elseif (isset($contatoComercial['email']) && filter_var($contatoComercial['email'], FILTER_VALIDATE_EMAIL)) {
+                $emailDestino = $contatoComercial['email'];
+            }
+
+            if ($emailDestino) {
+                Mail::to($emailDestino)->send(new FaturaGeradaMail($fatura));
+                Log::info("E-mail de fatura {$fatura->numero_fatura} enviado para {$emailDestino}");
+            } else {
+                Log::warning("Fatura {$fatura->numero_fatura} gerada, mas o cliente não possui um e-mail válido para envio.");
+            }
+        } catch (\Exception $e) {
+            Log::error("Falha ao enviar e-mail da fatura {$fatura->numero_fatura}: ".$e->getMessage());
+            // Não retorna erro para o usuário, apenas loga.
+        }
+    }
+
 
     public function show(Fatura $fatura): View
     {
@@ -165,6 +184,7 @@ class FaturamentoController extends Controller
 
     public function destroy(Fatura $fatura): RedirectResponse
     {
+        // Futuramente, podemos adicionar a lógica para cancelar a cobrança no Asaas aqui.
         try {
             DB::beginTransaction();
 
