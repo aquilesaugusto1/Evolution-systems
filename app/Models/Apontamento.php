@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use App\Traits\ConvertsTime;
-use Database\Factories\ApontamentoFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Apontamento extends Model
 {
@@ -74,5 +74,10 @@ class Apontamento extends Model
     public function fatura(): BelongsTo
     {
         return $this->belongsTo(Fatura::class);
+    }
+
+    public function pagamentos(): BelongsToMany
+    {
+        return $this->belongsToMany(Pagamento::class, 'apontamento_pagamento');
     }
 }

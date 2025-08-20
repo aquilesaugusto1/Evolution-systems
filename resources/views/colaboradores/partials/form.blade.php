@@ -121,6 +121,20 @@
     </div>
 
     <div>
+        <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Dados de Remuneração</h3>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="salario_mensal_container" class="hidden">
+                <x-input-label for="salario_mensal" :value="__('Salário Mensal (R$)')" />
+                <x-text-input id="salario_mensal" name="salario_mensal" type="number" step="0.01" class="mt-1 block w-full" :value="old('salario_mensal', $colaborador->salario_mensal ?? '')" />
+            </div>
+            <div id="valor_hora_container" class="hidden">
+                <x-input-label for="valor_hora" :value="__('Valor por Hora (R$)')" />
+                <x-text-input id="valor_hora" name="valor_hora" type="number" step="0.01" class="mt-1 block w-full" :value="old('valor_hora', $colaborador->valor_hora ?? '')" />
+            </div>
+        </div>
+    </div>
+
+    <div>
         <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Credenciais de Acesso</h3>
         <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -154,19 +168,41 @@
             placeholder: 'Selecione os gestores...'
         });
 
-       
         const tipoContratoSelect = document.getElementById('tipo_contrato');
         const dadosEmpresaContainer = document.getElementById('dados_empresa_prestador_container');
+        const salarioMensalContainer = document.getElementById('salario_mensal_container');
+        const valorHoraContainer = document.getElementById('valor_hora_container');
+        
         const pjTypes = ['PJ Mensal', 'PJ Horista'];
-        function toggleDadosEmpresa() {
-            if (pjTypes.includes(tipoContratoSelect.value)) {
+        const mensalTypes = ['CLT', 'PJ Mensal', 'Estágio'];
+        const horistaTypes = ['PJ Horista'];
+
+        function toggleFields() {
+            const tipo = tipoContratoSelect.value;
+
+            // Mostra/esconde dados da empresa PJ
+            if (pjTypes.includes(tipo)) {
                 dadosEmpresaContainer.classList.remove('hidden');
             } else {
                 dadosEmpresaContainer.classList.add('hidden');
             }
+
+            // Mostra/esconde campos de remuneração
+            if (mensalTypes.includes(tipo)) {
+                salarioMensalContainer.classList.remove('hidden');
+            } else {
+                salarioMensalContainer.classList.add('hidden');
+            }
+
+            if (horistaTypes.includes(tipo)) {
+                valorHoraContainer.classList.remove('hidden');
+            } else {
+                valorHoraContainer.classList.add('hidden');
+            }
         }
-        tipoContratoSelect.addEventListener('change', toggleDadosEmpresa);
-        toggleDadosEmpresa();
+        
+        tipoContratoSelect.addEventListener('change', toggleFields);
+        toggleFields(); // Executa ao carregar a página
     });
 </script>
 @endpush

@@ -11,6 +11,7 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EmpresaParceiraController;
 use App\Http\Controllers\FaturamentoController;
 use App\Http\Controllers\MuralController;
+use App\Http\Controllers\PagamentoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\SugestaoController;
@@ -62,6 +63,9 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite
         Route::get('faturamento/{fatura}', [FaturamentoController::class, 'show'])->name('faturamento.show');
         Route::get('faturamento/{fatura}/pdf', [FaturamentoController::class, 'downloadPdf'])->name('faturamento.pdf');
         Route::delete('faturamento/{fatura}', [FaturamentoController::class, 'destroy'])->name('faturamento.destroy');
+
+        Route::get('pagamentos', [PagamentoController::class, 'index'])->name('pagamentos.index');
+        Route::post('pagamentos/processar', [PagamentoController::class, 'processar'])->name('pagamentos.processar');
     });
 
     Route::middleware('role:admin,coordenador_operacoes,coordenador_tecnico,techlead')->group(function () {

@@ -40,7 +40,10 @@ class User extends Authenticatable
         'redes_sociais',
         'dados_empresa_prestador',
         'dados_bancarios',
-        'termos_aceite_em',
+        'salario_mensal',
+        'valor_hora',
+        'termo_aceite',
+        'data_aceite',
         'ip_aceite',
         'created_by',
         'updated_by',
@@ -61,45 +64,33 @@ class User extends Authenticatable
             'dados_empresa_prestador' => 'array',
             'dados_bancarios' => 'array',
             'data_nascimento' => 'date',
-            'termos_aceite_em' => 'datetime',
+            'termo_aceite' => 'boolean',
+            'data_aceite' => 'datetime',
+            'salario_mensal' => 'decimal:2',
+            'valor_hora' => 'decimal:2',
         ];
     }
 
-    /**
-     * @return HasOne<Consultor, User>
-     */
     public function consultor(): HasOne
     {
         return $this->hasOne(Consultor::class, 'usuario_id');
     }
 
-    /**
-     * @return BelongsToMany<User, User>
-     */
     public function techLeads(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'colaborador_tech_lead', 'consultor_id', 'tech_lead_id');
     }
 
-    /**
-     * @return BelongsToMany<User, User>
-     */
     public function consultoresLiderados(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'colaborador_tech_lead', 'tech_lead_id', 'consultor_id');
     }
 
-    /**
-     * @return HasMany<Apontamento, User>
-     */
     public function apontamentos(): HasMany
     {
         return $this->hasMany(Apontamento::class, 'consultor_id');
     }
 
-    /**
-     * @return BelongsToMany<Contrato, User>
-     */
     public function contratos(): BelongsToMany
     {
         return $this->belongsToMany(Contrato::class, 'contrato_usuario', 'usuario_id', 'contrato_id')
@@ -134,19 +125,18 @@ class User extends Authenticatable
         return $this->funcao === 'consultor';
     }
 
-    /**
-     * @return HasMany<Fatura>
-     */
     public function faturasCriadas(): HasMany
     {
         return $this->hasMany(Fatura::class, 'created_by');
     }
 
-    /**
-     * @return HasOne<DashboardPreference, User>
-     */
     public function dashboardPreference(): HasOne
     {
         return $this->hasOne(DashboardPreference::class);
+    }
+
+    public function pagamentos(): HasMany
+    {
+        return $this->hasMany(Pagamento::class);
     }
 }

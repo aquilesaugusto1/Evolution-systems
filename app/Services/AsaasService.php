@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\EmpresaParceira;
 use App\Models\Fatura;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -67,9 +68,6 @@ class AsaasService
         }
     }
 
-    /**
-     * Cria uma cobrança no Asaas com o tipo especificado.
-     */
     public function criarCobranca(Fatura $fatura, string $billingType): ?array
     {
         $clienteId = $this->criarOuRecuperarCliente($fatura->contrato->empresaParceira);
@@ -122,6 +120,46 @@ class AsaasService
         } catch (\Exception $e) {
             Log::channel('stack')->error("Exceção GERAL ao cancelar cobrança {$paymentId} no Asaas: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    public function criarTransferenciaPix(User $colaborador, float $valor): ?array
+    {
+        $dadosBancarios = $colaborador->dados_bancarios;
+        $dadosPj = $colaborador->dados_empresa_prestador;
+
+        if (empty($dadosBancarios['banco']) || empty($dadosBancarios['agencia']) || empty($dadosBancarios['conta'])) {
+            Log::error("Dados bancários incompletos para o colaborador ID: {$colaborador->id}");
+            return null;
+        }
+
+        try {
+            $payload = [
+                'value' => $valor,
+                'bankAccount' => [
+                    'bank' => ['code' => $dadosBancarios['banco']],
+                    'accountName' => $dadosPj['razao_social'] ?? $colaborador->nome . ' ' . $colaborador->sobrenome,
+                    'ownerName' => $dadosPj['razao_social'] ?? $colaborador->nome . ' ' . $colaborador->sobrenome,
+                    'cpfCnpj' => $dadosPj['cnpj'] ?? '', // Adicionar CPF se tiver
+                    'agency' => $dadosBancarios['agencia'],
+                    'account' => $dadosBancarios['conta'],
+                    'accountDigit' => $dadosBancarios['conta_digito'] ?? '',
+                    'bankAccountType' => str_contains(strtolower($dadosBancarios['tipo_conta'] ?? 'corrente'), 'corrente') ? 'CONTA_CORRENTE' : 'CONTA_POUPANCA',
+                ],
+            ];
+
+            $response = $this->http->post('/transfers', $payload);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('Falha ao criar transferência PIX no Asaas: ' . $response->body(), ['payload' => $payload]);
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Exceção ao criar transferência PIX no Asaas: ' . $e->getMessage());
+            return null;
         }
     }
 }

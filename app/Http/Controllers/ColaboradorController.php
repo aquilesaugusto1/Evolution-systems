@@ -93,9 +93,6 @@ class ColaboradorController extends Controller
         return redirect()->route('colaboradores.index')->with('success', $mensagem);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     private function getValidationRules(Request $request, ?int $id = null): array
     {
         $rules = [
@@ -123,6 +120,8 @@ class ColaboradorController extends Controller
             'dados_bancarios.banco' => ['nullable', 'string', 'max:255'],
             'dados_bancarios.agencia' => ['nullable', 'string', 'max:255'],
             'dados_bancarios.conta' => ['nullable', 'string', 'max:255'],
+            'salario_mensal' => ['nullable', 'numeric', 'min:0'],
+            'valor_hora' => ['nullable', 'numeric', 'min:0'],
         ];
         if (! $id || $request->filled('password')) {
             $rules['password'] = ['required', 'confirmed', Rules\Password::defaults()];
@@ -131,9 +130,6 @@ class ColaboradorController extends Controller
         return $rules;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     private function getData(Request $request, bool $isCreate = true): array
     {
         $data = $request->except(['_token', '_method', 'password_confirmation', 'tech_leads']);
@@ -151,6 +147,15 @@ class ColaboradorController extends Controller
         }
 
         $data['dados_empresa_prestador'] = in_array($request->input('tipo_contrato'), ['PJ Mensal', 'PJ Horista']) ? $request->input('dados_empresa_prestador') : null;
+
+        // Limpa os campos de remuneração se não forem aplicáveis
+        $tipoContrato = $request->input('tipo_contrato');
+        if (!in_array($tipoContrato, ['CLT', 'PJ Mensal', 'Estágio'])) {
+            $data['salario_mensal'] = null;
+        }
+        if ($tipoContrato !== 'PJ Horista') {
+            $data['valor_hora'] = null;
+        }
 
         return $data;
     }
