@@ -22,22 +22,37 @@
                                     <div>
                                         <p class="font-bold text-lg text-slate-800">{{ $apontamento->consultor->nome }}</p>
                                         <p class="text-sm text-slate-600">
-                                            Para <strong>{{ $apontamento->agenda->contrato->cliente->nome_empresa ?? 'Cliente não encontrado' }}</strong>
+                                            Para <strong>{{ $apontamento->contrato->empresaParceira->nome_empresa ?? 'Cliente não encontrado' }}</strong>
                                         </p>
                                         <p class="text-xs text-slate-500">Enviado em: {{ $apontamento->created_at->format('d/m/Y H:i') }}</p>
                                     </div>
                                     <div class="text-right flex-shrink-0 ml-4">
                                         <p class="text-2xl font-bold text-indigo-600">{{ $apontamento->horas_gastas }}h</p>
-                                        <p class="text-xs font-semibold {{ $apontamento->faturavel ? 'text-emerald-600' : 'text-amber-600' }}">{{ $apontamento->faturavel ? 'Faturável' : 'Não Faturável' }}</p>
+                                        <p class="text-xs font-semibold {{ $apontamento->agenda->faturavel ? 'text-emerald-600' : 'text-amber-600' }}">
+                                            {{ $apontamento->agenda->faturavel ? 'Faturável' : 'Não Faturável' }}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <div class="mt-4 p-4 bg-slate-50 rounded-md">
+                                <div class="mb-4 text-sm">
+                                    <span class="font-semibold text-slate-600">Tipo de Período:</span>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full {{ 
+                                        match($apontamento->agenda->tipo_periodo) {
+                                            'inteiro' => 'bg-blue-100 text-blue-800',
+                                            'meio' => 'bg-purple-100 text-purple-800',
+                                            default => 'bg-slate-100 text-slate-800'
+                                        } 
+                                    }}">
+                                        {{ ucfirst($apontamento->agenda->tipo_periodo) }}
+                                    </span>
+                                </div>
+
+                                <div class="p-4 bg-slate-50 rounded-md">
                                     <p class="text-sm font-semibold text-slate-700 mb-1">Atividade: {{ $apontamento->agenda->assunto }}</p>
                                     <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ $apontamento->descricao }}</p>
                                     @if($apontamento->caminho_anexo)
                                         <a href="{{ Storage::url($apontamento->caminho_anexo) }}" target="_blank" class="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline">
-                                            Visualizar Anexo (PDF)
+                                            Visualizar Anexo
                                         </a>
                                     @endif
                                 </div>

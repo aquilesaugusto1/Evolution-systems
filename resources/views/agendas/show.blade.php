@@ -35,6 +35,14 @@
                                 <span class="font-medium text-slate-600">Contrato:</span>
                                 <span class="text-slate-800">#{{ $agenda->contrato->numero_contrato ?? $agenda->contrato->id }}</span>
                             </div>
+                            <div class="flex justify-between border-b py-2">
+                                <span class="font-medium text-slate-600">Tipo de Período:</span>
+                                <span class="text-slate-800">{{ ucfirst($agenda->tipo_periodo) }}</span>
+                            </div>
+                             <div class="flex justify-between border-b py-2">
+                                <span class="font-medium text-slate-600">Faturável:</span>
+                                <span class="text-slate-800">{{ $agenda->faturavel ? 'Sim' : 'Não' }}</span>
+                            </div>
                         </div>
                     </div>
                     

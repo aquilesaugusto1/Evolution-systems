@@ -40,7 +40,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite
     Route::get('/apontamentos', [ApontamentoController::class, 'index'])->name('apontamentos.index');
     Route::post('/apontamentos', [ApontamentoController::class, 'store'])->name('apontamentos.store');
     Route::delete('/apontamentos/{apontamento}', [ApontamentoController::class, 'destroy'])->name('apontamentos.destroy');
-    Route::get('/api/agendas', [ApontamentoController::class, 'events'])->name('api.agendas');
+    Route::get('/apontamentos/events', [ApontamentoController::class, 'events'])->name('apontamentos.events');
 
     Route::get('/relatorios', [RelatorioController::class, 'index'])->name('relatorios.index');
     Route::get('/relatorios/{tipo}', [RelatorioController::class, 'show'])->name('relatorios.show');

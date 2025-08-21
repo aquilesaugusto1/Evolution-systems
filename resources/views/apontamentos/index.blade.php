@@ -6,46 +6,6 @@
             max-width: 1100px;
             margin: 0 auto;
         }
-        /* Estilo para o switch 'Faturável' */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 28px;
-        }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 28px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #4f46e5; /* Indigo */
-        }
-        input:checked + .slider:before {
-            transform: translateX(22px);
-        }
     </style>
     @endpush
 
@@ -57,7 +17,6 @@
         </div>
     </div>
 
-    <!-- Modal de Apontamento -->
     <div id="apontamentoModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
@@ -68,11 +27,11 @@
                     @csrf
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <div class="flex justify-between items-center">
-                             <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Lançar Apontamento</h3>
-                             <button type="button" id="closeModalButton" class="text-gray-400 hover:text-gray-500">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Lançar Apontamento</h3>
+                            <button type="button" id="closeModalButton" class="text-gray-400 hover:text-gray-500">
                                 <span class="sr-only">Fechar</span>
                                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                             </button>
+                            </button>
                         </div>
                         
                         <div class="mt-4 space-y-4">
@@ -86,6 +45,7 @@
                                 <p><strong>Consultor:</strong> <span id="modal_consultor"></span></p>
                                 <p><strong>Contrato:</strong> <span id="modal_contrato"></span></p>
                                 <p><strong>Assunto:</strong> <span id="modal_assunto"></span></p>
+                                <p><strong>Faturável:</strong> <span id="modal_faturavel"></span></p>
                             </div>
                             
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
@@ -109,17 +69,9 @@
                             </div>
                             
                             <div>
-                                <label for="anexo" class="block text-sm font-medium text-gray-700">Anexo (PDF Obrigatório) *</label>
-                                <input type="file" name="anexo" id="anexo" accept=".pdf" class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" required>
+                                <label for="anexo" class="block text-sm font-medium text-gray-700">Anexo (Opcional)</label>
+                                <input type="file" name="anexo" id="anexo" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                                 <div id="anexo_existente" class="mt-2 text-sm"></div>
-                            </div>
-
-                            <div class="flex items-center justify-between">
-                                <label for="faturavel" class="block text-sm font-medium text-gray-700">Faturável?</label>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="faturavel" name="faturavel" value="1" checked>
-                                    <span class="slider"></span>
-                                </label>
                             </div>
                         </div>
                     </div>
@@ -174,7 +126,7 @@
                 initialView: 'dayGridMonth',
                 locale: 'pt-br',
                 buttonText: { today: 'Hoje', month: 'Mês', week: 'Semana', day: 'Dia' },
-                events: '{{ route("api.agendas") }}',
+                events: '{{ route("apontamentos.events") }}',
                 eventClick: function(info) {
                     const props = info.event.extendedProps;
                     
@@ -183,14 +135,34 @@
                     document.getElementById('modal_consultor').textContent = props.consultor;
                     document.getElementById('modal_assunto').textContent = props.assunto;
                     document.getElementById('modal_contrato').textContent = props.contrato;
-                    document.getElementById('hora_inicio').value = props.hora_inicio;
-                    document.getElementById('hora_fim').value = props.hora_fim;
+                    document.getElementById('modal_faturavel').textContent = props.faturavel ? 'Sim' : 'Não';
                     document.getElementById('descricao').value = props.descricao;
-                    document.getElementById('faturavel').checked = props.faturavel !== false; // Default to true
+                    
+                    // Preenchimento automático de horas
+                    if(props.hora_inicio && props.hora_fim) {
+                        document.getElementById('hora_inicio').value = props.hora_inicio;
+                        document.getElementById('hora_fim').value = props.hora_fim;
+                    } else {
+                        const dataHoraInicio = new Date(info.event.start);
+                        const horaInicio = dataHoraInicio.toTimeString().slice(0, 5);
+                        let horaFim = '';
+
+                        if (props.tipo_periodo === 'inteiro') {
+                            const dataHoraFim = new Date(dataHoraInicio.getTime() + 9 * 60 * 60 * 1000);
+                            horaFim = dataHoraFim.toTimeString().slice(0, 5);
+                        } else if (props.tipo_periodo === 'meio') {
+                            const dataHoraFim = new Date(dataHoraInicio.getTime() + 5 * 60 * 60 * 1000);
+                            horaFim = dataHoraFim.toTimeString().slice(0, 5);
+                        }
+                        
+                        document.getElementById('hora_inicio').value = horaInicio;
+                        document.getElementById('hora_fim').value = horaFim;
+                    }
+                    
                     document.getElementById('anexo_existente').innerHTML = props.anexo_url ? `<a href="${props.anexo_url}" target="_blank" class="text-indigo-600 hover:underline">Ver anexo atual</a>` : '';
                     
                     const anexoInput = document.getElementById('anexo');
-                    anexoInput.required = !props.anexo_url;
+                    anexoInput.required = false;
 
                     const infoRejeicao = document.getElementById('info_rejeicao');
                     if (props.status === 'Rejeitado' && props.motivo_rejeicao) {

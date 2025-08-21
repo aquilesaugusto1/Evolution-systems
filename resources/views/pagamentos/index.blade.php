@@ -7,7 +7,6 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Filtro de Período -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 bg-white border-b border-gray-200">
                     <form action="{{ route('pagamentos.index') }}" method="GET">
@@ -39,8 +38,18 @@
                     </form>
                 </div>
             </div>
+            
+            @if (session('detalhes_erros'))
+                <div class="mt-4 p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+                    <span class="font-medium">Detalhes dos Erros:</span>
+                    <ul class="mt-1.5 list-disc list-inside">
+                        @foreach (session('detalhes_erros') as $erro)
+                            <li>{{ $erro }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
-            <!-- Tabela de Pagamentos -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
                     <form action="{{ route('pagamentos.processar') }}" method="POST" onsubmit="return confirm('Tem certeza que deseja processar os pagamentos pendentes para este período? Esta ação não pode ser desfeita.');">
@@ -70,21 +79,21 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @forelse($dadosPagamento as $dados)
+                                @forelse($dadosPagamento as $dado)
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $dados['nome'] }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $dados['tipo_contrato'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $dado['nome'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $dado['tipo_contrato'] }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $dados['horas_trabalhadas'] > 0 ? number_format($dados['horas_trabalhadas'], 2, ',', '.') . 'h' : 'N/A' }}
+                                            {{ $dado['horas_trabalhadas'] }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">R$ {{ number_format($dados['valor_calculado'], 2, ',', '.') }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">R$ {{ number_format($dado['valor_calculado'], 2, ',', '.') }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                @if($dados['status_pagamento'] == 'Pendente') bg-yellow-100 text-yellow-800 @endif
-                                                @if($dados['status_pagamento'] == 'Pago') bg-green-100 text-green-800 @endif
-                                                @if($dados['status_pagamento'] == 'Erro') bg-red-100 text-red-800 @endif
+                                                @if($dado['status_pagamento'] == 'Pendente') bg-yellow-100 text-yellow-800 @endif
+                                                @if($dado['status_pagamento'] == 'Pago') bg-green-100 text-green-800 @endif
+                                                @if($dado['status_pagamento'] == 'Erro') bg-red-100 text-red-800 @endif
                                             ">
-                                                {{ $dados['status_pagamento'] }}
+                                                {{ $dado['status_pagamento'] }}
                                             </span>
                                         </td>
                                     </tr>

@@ -61,7 +61,6 @@ class ApontamentoController extends Controller
             'hora_fim' => 'required|date_format:H:i|after:hora_inicio',
             'descricao' => 'required|string|max:2000',
             'anexo' => ['nullable', 'file', 'mimes:pdf,jpg,png,jpeg', 'max:2048'],
-            'faturavel' => 'nullable|boolean',
         ]);
 
         $agenda = Agenda::findOrFail($validated['agenda_id']);
@@ -84,7 +83,6 @@ class ApontamentoController extends Controller
         $apontamento->horas_gastas = round($fim->diffInMinutes($inicio) / 60, 2);
         $apontamento->descricao = $validated['descricao'];
         $apontamento->status = 'Pendente';
-        $apontamento->faturavel = $request->boolean('faturavel');
         $apontamento->motivo_rejeicao = null;
 
         if ($request->hasFile('anexo')) {
@@ -99,13 +97,11 @@ class ApontamentoController extends Controller
 
         $apontamento->save();
 
-        // ** GATILHO DA NOTIFICAÇÃO ATUALIZADO **
         $consultor = $apontamento->consultor;
         if ($consultor) {
             $techLeads = $consultor->techLeads;
             $admins = User::where('funcao', 'admin')->get();
             
-            // Junta as duas coleções e remove duplicados para não notificar duas vezes
             $destinatarios = $techLeads->merge($admins)->unique('id');
 
             if ($destinatarios->isNotEmpty()) {
@@ -121,27 +117,27 @@ class ApontamentoController extends Controller
         return $agendas->map(function (Agenda $agenda) {
             $apontamento = $agenda->apontamento;
             $status = 'Não Apontado';
-            $color = '#6B7280'; // Cinza
+            $color = '#6B7280';
 
             if ($agenda->status === 'Cancelada') {
                 $status = 'Cancelada';
-                $color = '#EF4444'; // Vermelho
+                $color = '#EF4444';
             } elseif ($apontamento) {
                 $status = $apontamento->status;
                 switch ($status) {
                     case 'Pendente':
-                        $color = '#F59E0B'; // Ambar
+                        $color = '#F59E0B';
                         break;
                     case 'Aprovado':
-                        $color = '#10B981'; // Verde
+                        $color = '#10B981';
                         break;
                     case 'Rejeitado':
-                        $color = '#EF4444'; // Vermelho
+                        $color = '#EF4444';
                         break;
                 }
             } else {
                 $status = 'Agendada';
-                $color = '#3B82F6'; // Azul
+                $color = '#3B82F6';
             }
 
             return [
@@ -157,7 +153,7 @@ class ApontamentoController extends Controller
                     'hora_inicio' => $apontamento ? Carbon::parse($apontamento->hora_inicio)->format('H:i') : '',
                     'hora_fim' => $apontamento ? Carbon::parse($apontamento->hora_fim)->format('H:i') : '',
                     'descricao' => $apontamento->descricao ?? '',
-                    'faturavel' => $apontamento->faturavel ?? true,
+                    'faturavel' => $agenda->faturavel,
                     'anexo_url' => $apontamento && $apontamento->caminho_anexo ? Storage::url($apontamento->caminho_anexo) : null,
                     'motivo_rejeicao' => $apontamento->motivo_rejeicao ?? null,
                 ],

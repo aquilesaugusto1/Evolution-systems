@@ -61,16 +61,28 @@ class AprovacaoController extends Controller
                     $apontamento->agenda->save();
                 }
 
-                if ($apontamento->faturavel && ($contrato = $apontamento->contrato)) {
-                    $horasContratoDecimal = $contrato->baseline_horas_mes_decimal;
-                    $horasApontamentoDecimal = abs($apontamento->horas_gastas_decimal);
-                    
-                    $novoSaldoDecimal = $horasContratoDecimal - $horasApontamentoDecimal;
-                    
-                    $contrato->baseline_horas_mes = self::decimalToTime($novoSaldoDecimal);
-                    $contrato->save();
+                if ($apontamento->agenda->faturavel && ($contrato = $apontamento->contrato)) {
+                    $horasADescontar = 0;
 
-                    // ** GATILHO DA NOTIFICAÇÃO DE SALDO DE HORAS **
+                    switch ($apontamento->agenda->tipo_periodo) {
+                        case 'inteiro':
+                            $horasADescontar = 8;
+                            break;
+                        case 'meio':
+                            $horasADescontar = 4;
+                            break;
+                        default:
+                            $horasADescontar = abs($apontamento->horas_gastas_decimal);
+                            break;
+                    }
+                    
+                    if ($horasADescontar > 0) {
+                        $horasContratoDecimal = $contrato->baseline_horas_mes_decimal;
+                        $novoSaldoDecimal = $horasContratoDecimal - $horasADescontar;
+                        $contrato->baseline_horas_mes = self::decimalToTime($novoSaldoDecimal);
+                        $contrato->save();
+                    }
+
                     $this->verificarSaldoContrato($contrato);
                 }
             });
@@ -79,9 +91,9 @@ class AprovacaoController extends Controller
                 $apontamento->consultor->notify(new ApontamentoStatusAlterado($apontamento));
             }
 
-            $message = $apontamento->faturavel
-                ? 'Apontamento aprovado e faturado com sucesso!'
-                : 'Apontamento aprovado com sucesso (horas não faturadas).';
+            $message = $apontamento->agenda->faturavel
+                ? 'Apontamento aprovado e horas debitadas do contrato com sucesso!'
+                : 'Apontamento aprovado com sucesso (agendamento não faturável).';
 
             return redirect()->route('aprovacoes.index')->with('success', $message);
 
@@ -98,7 +110,6 @@ class AprovacaoController extends Controller
         $apontamento->loadMissing('consultor');
 
         $apontamento->status = 'Rejeitado';
-        $apontamento->faturavel = false;
         $apontamento->motivo_rejeicao = $validated['motivo_rejeicao'];
         $apontamento->aprovado_por_id = (int) Auth::id();
         $apontamento->data_aprovacao = now();
@@ -111,9 +122,6 @@ class AprovacaoController extends Controller
         return redirect()->route('aprovacoes.index')->with('success', 'Apontamento rejeitado com sucesso.');
     }
 
-    /**
-     * Verifica o saldo de horas de um contrato e dispara notificação se estiver baixo.
-     */
     private function verificarSaldoContrato($contrato): void
     {
         $horasOriginais = (float) $contrato->baseline_horas_original_decimal;
@@ -124,7 +132,6 @@ class AprovacaoController extends Controller
         $horasRestantes = (float) $contrato->baseline_horas_mes_decimal;
         $percentualRestante = ($horasRestantes / $horasOriginais) * 100;
 
-        // Define o limite em 20%
         $limite = 20.0;
 
         if ($percentualRestante <= $limite) {

@@ -113,10 +113,27 @@
     
     <div>
         <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Dados Bancários</h3>
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div><x-input-label for="banco" :value="__('Banco')" /><x-text-input id="banco" name="dados_bancarios[banco]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.banco', $colaborador->dados_bancarios['banco'] ?? '')" /></div>
-            <div><x-input-label for="agencia" :value="__('Agência')" /><x-text-input id="agencia" name="dados_bancarios[agencia]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.agencia', $colaborador->dados_bancarios['agencia'] ?? '')" /></div>
-            <div><x-input-label for="conta" :value="__('Conta')" /><x-text-input id="conta" name="dados_bancarios[conta]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.conta', $colaborador->dados_bancarios['conta'] ?? '')" /></div>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <div><x-input-label for="banco" :value="__('Banco')" /><x-text-input id="banco" name="dados_bancarios[banco]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.banco', $colaborador->dados_bancarios['banco'] ?? '')" /></div>
+                <div><x-input-label for="agencia" :value="__('Agência')" /><x-text-input id="agencia" name="dados_bancarios[agencia]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.agencia', $colaborador->dados_bancarios['agencia'] ?? '')" /></div>
+                <div><x-input-label for="conta" :value="__('Conta')" /><x-text-input id="conta" name="dados_bancarios[conta]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.conta', $colaborador->dados_bancarios['conta'] ?? '')" /></div>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <x-input-label for="tipo_chave_pix" :value="__('Tipo de Chave PIX')" />
+                    <select name="tipo_chave_pix" id="tipo_chave_pix" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        <option value="">Selecione...</option>
+                        @foreach(['CPF', 'CNPJ', 'EMAIL', 'PHONE', 'EVP'] as $tipo)
+                            <option value="{{ $tipo }}" @selected(old('tipo_chave_pix', $colaborador->tipo_chave_pix ?? '') == $tipo)>{{ $tipo }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <x-input-label for="chave_pix" :value="__('Chave PIX')" />
+                    <x-text-input id="chave_pix" name="chave_pix" type="text" class="mt-1 block w-full" :value="old('chave_pix', $colaborador->chave_pix ?? '')" />
+                </div>
+            </div>
         </div>
     </div>
 
@@ -180,14 +197,12 @@
         function toggleFields() {
             const tipo = tipoContratoSelect.value;
 
-            // Mostra/esconde dados da empresa PJ
             if (pjTypes.includes(tipo)) {
                 dadosEmpresaContainer.classList.remove('hidden');
             } else {
                 dadosEmpresaContainer.classList.add('hidden');
             }
 
-            // Mostra/esconde campos de remuneração
             if (mensalTypes.includes(tipo)) {
                 salarioMensalContainer.classList.remove('hidden');
             } else {
@@ -202,7 +217,7 @@
         }
         
         tipoContratoSelect.addEventListener('change', toggleFields);
-        toggleFields(); // Executa ao carregar a página
+        toggleFields();
     });
 </script>
 @endpush

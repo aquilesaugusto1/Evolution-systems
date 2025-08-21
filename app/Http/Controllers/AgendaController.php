@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\NotificacaoAgendaMail; // Alterado aqui
+use App\Mail\NotificacaoAgendaMail;
 use App\Models\Agenda;
 use App\Models\Contrato;
 use App\Models\User;
@@ -104,9 +104,12 @@ class AgendaController extends Controller
             'consultor_id' => 'required|exists:usuarios,id',
             'contrato_id' => 'required|exists:contratos,id',
             'assunto' => 'required|string|max:255',
-            'data_hora' => 'required|date',
+            'data' => 'required|date_format:Y-m-d',
+            'hora_inicio' => 'required|date_format:H:i',
             'descricao' => 'nullable|string',
             'status' => 'required|string|in:Agendada,Realizada,Cancelada',
+            'tipo_periodo' => 'required|string|in:personalizado,inteiro,meio',
+            'faturavel' => 'nullable|boolean',
         ]);
 
         $user = Auth::user();
@@ -118,7 +121,11 @@ class AgendaController extends Controller
             return back()->withErrors(['consultor_id' => 'Você só pode criar agendas para consultores que você lidera.'])->withInput();
         }
 
-        $agenda = Agenda::create($validated);
+        $data = $validated;
+        $data['data_hora'] = $validated['data'] . ' ' . $validated['hora_inicio'];
+        $data['faturavel'] = $request->boolean('faturavel');
+
+        $agenda = Agenda::create($data);
 
         Log::info('Tentando enviar e-mail de nova agenda.', [
             'agenda_id' => $agenda->id,
@@ -126,7 +133,6 @@ class AgendaController extends Controller
         ]);
 
         try {
-            // Alterado aqui para usar a nova classe
             Mail::to($agenda->consultor->email)->send(new NotificacaoAgendaMail($agenda, 'criada'));
             Log::info('E-mail de nova agenda enviado com sucesso para: '.$agenda->consultor->email);
         } catch (Exception $e) {
@@ -191,9 +197,12 @@ class AgendaController extends Controller
             'consultor_id' => 'required|exists:usuarios,id',
             'contrato_id' => 'required|exists:contratos,id',
             'assunto' => 'required|string|max:255',
-            'data_hora' => 'required|date',
+            'data' => 'required|date_format:Y-m-d',
+            'hora_inicio' => 'required|date_format:H:i',
             'descricao' => 'nullable|string',
             'status' => 'required|string|in:Agendada,Realizada,Cancelada',
+            'tipo_periodo' => 'required|string|in:personalizado,inteiro,meio',
+            'faturavel' => 'nullable|boolean',
         ]);
         $user = Auth::user();
         if (! $user) {
@@ -203,7 +212,12 @@ class AgendaController extends Controller
         if ($user->isTechLead() && ! $user->consultoresLiderados()->where('usuarios.id', $validated['consultor_id'])->exists()) {
             return back()->withErrors(['consultor_id' => 'Você só pode atribuir agendas a este consultor.'])->withInput();
         }
-        $agenda->update($validated);
+
+        $data = $validated;
+        $data['data_hora'] = $validated['data'] . ' ' . $validated['hora_inicio'];
+        $data['faturavel'] = $request->boolean('faturavel');
+        
+        $agenda->update($data);
 
         Log::info('Tentando enviar e-mail de atualização de agenda.', [
             'agenda_id' => $agenda->id,
@@ -211,7 +225,6 @@ class AgendaController extends Controller
         ]);
 
         try {
-            // Alterado aqui para usar a nova classe
             Mail::to($agenda->consultor->email)->send(new NotificacaoAgendaMail($agenda, 'atualizada'));
             Log::info('E-mail de atualização de agenda enviado com sucesso para: '.$agenda->consultor->email);
         } catch (Exception $e) {

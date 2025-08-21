@@ -120,6 +120,8 @@ class ColaboradorController extends Controller
             'dados_bancarios.banco' => ['nullable', 'string', 'max:255'],
             'dados_bancarios.agencia' => ['nullable', 'string', 'max:255'],
             'dados_bancarios.conta' => ['nullable', 'string', 'max:255'],
+            'tipo_chave_pix' => ['nullable', 'string', 'in:CPF,CNPJ,EMAIL,PHONE,EVP'],
+            'chave_pix' => ['nullable', 'string', 'max:255'],
             'salario_mensal' => ['nullable', 'numeric', 'min:0'],
             'valor_hora' => ['nullable', 'numeric', 'min:0'],
         ];
@@ -148,7 +150,6 @@ class ColaboradorController extends Controller
 
         $data['dados_empresa_prestador'] = in_array($request->input('tipo_contrato'), ['PJ Mensal', 'PJ Horista']) ? $request->input('dados_empresa_prestador') : null;
 
-        // Limpa os campos de remuneração se não forem aplicáveis
         $tipoContrato = $request->input('tipo_contrato');
         if (!in_array($tipoContrato, ['CLT', 'PJ Mensal', 'Estágio'])) {
             $data['salario_mensal'] = null;
