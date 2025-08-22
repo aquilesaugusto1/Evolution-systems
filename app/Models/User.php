@@ -143,4 +143,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pagamento::class);
     }
+
+    /**
+     * Accessor for the 'active_status' attribute.
+     *
+     * @return bool
+     */
+    public function getActiveStatusAttribute(): bool
+    {
+        return $this->status === 'Ativo';
+    }
 }

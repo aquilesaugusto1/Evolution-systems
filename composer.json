@@ -11,6 +11,7 @@
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9",
         "maatwebsite/excel": "^3.1",
+        "munafio/chatify": "^1.6",
         "wildbit/swiftmailer-postmark": "^3.3"
     },
     "require-dev": {
@@ -68,15 +69,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": {
-        "php-insights": {
-            "type": "vcs",
-            "url": "https://github.com/nunomaduro/phpinsights"
-        },
-        "packagist": {
-            "type": "composer",
-            "url": "https://repo.packagist.org"
-        }
-    }
+    "prefer-stable": true
 }
