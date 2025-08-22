@@ -1,12 +1,9 @@
-<!-- Overlay for mobile -->
 <div x-show="sidebarOpen" class="lg:hidden fixed inset-0 z-30 bg-black/30" @click="sidebarOpen = false" x-cloak></div>
 
-<!-- Sidebar -->
 <div
     class="bg-slate-900 text-slate-300 w-64 flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-40 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0"
     :class="{'translate-x-0': sidebarOpen}"
 >
-    <!-- Logo -->
     <div class="flex items-center justify-center h-16 bg-slate-950 flex-shrink-0 px-4">
         <a href="{{ route('dashboard') }}" class="flex items-center space-x-3">
             <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-slate-800 flex-shrink-0">
@@ -16,10 +13,8 @@
         </a>
     </div>
 
-    <!-- Navigation Links -->
     <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
         
-        <!-- Principal Section -->
         <div>
             <p class="px-4 mb-2 text-xs font-semibold uppercase text-slate-500">Principal</p>
             <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-2.5 rounded-lg transition-colors duration-200 {{ request()->routeIs('dashboard') ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300' }}">
@@ -40,7 +35,6 @@
             </a>
         </div>
 
-        <!-- Gestão Section -->
         <div class="mt-4">
             <p class="px-4 mb-2 text-xs font-semibold uppercase text-slate-500">Gestão</p>
             @can('viewAprovacoes', App\Models\Apontamento::class)
@@ -58,6 +52,10 @@
                     <svg class="h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
                     <span>Gestão de Pagamentos</span>
                 </a>
+                <a href="{{ route('impostos.index') }}" class="flex items-center px-4 py-2.5 rounded-lg transition-colors duration-200 {{ request()->routeIs('impostos.*') ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300' }}">
+                    <svg class="h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.9-2.295l3.67-1.02a1.875 1.875 0 012.26 0l3.67 1.02c1.094.238 1.9 1.187 1.9 2.295z" /></svg>
+                    <span>Impostos</span>
+                </a>
             @endif
             <a href="{{ route('relatorios.index') }}" class="flex items-center px-4 py-2.5 rounded-lg transition-colors duration-200 {{ request()->routeIs('relatorios.*') ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300' }}">
                 <svg class="h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 1.5m1-1.5l1 1.5m0 0l.5 1.5m.5-1.5l-1.5-2.25m1.5 2.25l1.5-2.25m0 0l1.5 2.25m-1.5-2.25l-1.5 2.25m-7.5 0h7.5" /></svg>
@@ -65,7 +63,6 @@
             </a>
         </div>
 
-        <!-- Cadastros Section -->
         <div class="mt-4">
             <p class="px-4 mb-2 text-xs font-semibold uppercase text-slate-500">Cadastros</p>
             @can('viewAny', App\Models\Contrato::class)
@@ -88,7 +85,6 @@
             @endcan
         </div>
         
-        <!-- Outros Section -->
         <div class="mt-4">
              <p class="px-4 mb-2 text-xs font-semibold uppercase text-slate-500">Outros</p>
             @if(in_array(auth()->user()->funcao, ['admin', 'coordenador_operacoes', 'coordenador_tecnico', 'techlead']))

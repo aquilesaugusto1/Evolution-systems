@@ -7,6 +7,7 @@ use App\Traits\Userstamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property-read Contrato $contrato
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Apontamento> $apontamentos
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Tax> $impostos
  * @property-read User|null $creator
  * @property-read User|null $updater
  */
@@ -63,5 +65,10 @@ class Fatura extends Model
     public function apontamentos(): HasMany
     {
         return $this->hasMany(Apontamento::class);
+    }
+
+    public function impostos(): BelongsToMany
+    {
+        return $this->belongsToMany(Tax::class, 'fatura_tax')->withPivot('valor_imposto')->withTimestamps();
     }
 }

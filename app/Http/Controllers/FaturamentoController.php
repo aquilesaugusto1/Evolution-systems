@@ -7,6 +7,7 @@ use App\Mail\FaturaGeradaMail;
 use App\Models\Apontamento;
 use App\Models\Contrato;
 use App\Models\Fatura;
+use App\Models\Tax; // Adicionado
 use App\Services\AsaasService;
 use App\Traits\ConvertsTime;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -35,6 +36,7 @@ class FaturamentoController extends Controller
     public function create(Request $request): View
     {
         $contratos = Contrato::with('empresaParceira')->where('status', 'Ativo')->orderBy('numero_contrato')->get();
+        $impostos = Tax::where('ativo', true)->get(); // Adicionado para buscar os impostos
         $selectedContratoId = $request->query('contrato_id');
         $apontamentos = collect();
         $totalHoras = '00:00';
@@ -68,7 +70,7 @@ class FaturamentoController extends Controller
             }
         }
 
-        return view('faturamento.create', compact('contratos', 'apontamentos', 'totalHoras', 'valorTotal', 'contratoSelecionado'));
+        return view('faturamento.create', compact('contratos', 'apontamentos', 'totalHoras', 'valorTotal', 'contratoSelecionado', 'impostos')); // Passa os impostos para a view
     }
 
     public function store(Request $request, AsaasService $asaasService): RedirectResponse
@@ -80,6 +82,8 @@ class FaturamentoController extends Controller
             'apontamento_ids' => 'required|array|min:1',
             'apontamento_ids.*' => 'exists:apontamentos,id',
             'billing_type' => 'required|string|in:PIX,BOLETO,CREDIT_CARD,UNDEFINED',
+            'impostos_ids' => 'nullable|array', // Validação para os impostos
+            'impostos_ids.*' => 'exists:taxes,id', // Validação para os impostos
         ]);
 
         try {
@@ -91,7 +95,26 @@ class FaturamentoController extends Controller
                     return $carry + abs($item->horas_gastas_decimal);
                 }, 0);
 
-                $valorTotalFatura = round($totalHorasDecimal * ($contrato->valor_hora ?? 0), 2);
+                $valorBaseFatura = round($totalHorasDecimal * ($contrato->valor_hora ?? 0), 2);
+                
+                // --- Lógica de cálculo dos impostos ---
+                $impostosSelecionados = Tax::whereIn('id', $validated['impostos_ids'] ?? [])->get();
+                $impostosParaSalvar = [];
+                $valorTotalImpostos = 0;
+
+                foreach ($impostosSelecionados as $imposto) {
+                    $valorCalculado = 0;
+                    if ($imposto->tipo_aliquota == 'percentual') {
+                        $valorCalculado = ($valorBaseFatura * $imposto->aliquota) / 100;
+                    } else { // tipo_aliquota == 'fixa'
+                        $valorCalculado = $imposto->aliquota;
+                    }
+                    $valorTotalImpostos += $valorCalculado;
+                    $impostosParaSalvar[$imposto->id] = ['valor_imposto' => round($valorCalculado, 2)];
+                }
+                
+                $valorTotalFatura = $valorBaseFatura + $valorTotalImpostos;
+                // --- Fim da lógica dos impostos ---
 
                 $anoMes = now()->format('Y-m');
                 $ultimoNumero = Fatura::where('numero_fatura', 'like', "FAT-{$anoMes}-%")->count();
@@ -102,10 +125,15 @@ class FaturamentoController extends Controller
                     'numero_fatura' => $novoNumero,
                     'data_emissao' => now(),
                     'data_vencimento' => now()->addDays(15),
-                    'valor_total' => $valorTotalFatura,
+                    'valor_total' => round($valorTotalFatura, 2), // Salva o valor final com impostos
                     'status' => FaturaStatusEnum::EM_ABERTO,
                     'billing_type' => $validated['billing_type'],
                 ]);
+
+                // Salva os impostos na tabela pivot
+                if (!empty($impostosParaSalvar)) {
+                    $fatura->impostos()->sync($impostosParaSalvar);
+                }
 
                 Apontamento::whereIn('id', $validated['apontamento_ids'])->update(['fatura_id' => $fatura->id]);
 
@@ -167,14 +195,14 @@ class FaturamentoController extends Controller
 
     public function show(Fatura $fatura): View
     {
-        $fatura->load('contrato.empresaParceira', 'apontamentos.consultor', 'creator');
+        $fatura->load('contrato.empresaParceira', 'apontamentos.consultor', 'creator', 'impostos'); // Carrega os impostos
 
         return view('faturamento.show', compact('fatura'));
     }
 
     public function downloadPdf(Fatura $fatura): Response
     {
-        $fatura->load('contrato.empresaParceira', 'apontamentos.consultor');
+        $fatura->load('contrato.empresaParceira', 'apontamentos.consultor', 'impostos'); // Carrega os impostos
         $pdf = Pdf::loadView('faturamento.pdf', compact('fatura'));
 
         return $pdf->download('fatura-'.$fatura->numero_fatura.'.pdf');
@@ -192,6 +220,7 @@ class FaturamentoController extends Controller
         try {
             DB::transaction(function () use ($fatura) {
                 Apontamento::where('fatura_id', $fatura->id)->update(['fatura_id' => null]);
+                $fatura->impostos()->sync([]); // Limpa os impostos relacionados
                 $fatura->update(['status' => FaturaStatusEnum::CANCELADA]);
                 $fatura->delete();
             });

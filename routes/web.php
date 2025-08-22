@@ -15,6 +15,7 @@ use App\Http\Controllers\PagamentoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\SugestaoController;
+use App\Http\Controllers\TaxController; // ADICIONADO
 use App\Http\Controllers\TermoAceiteController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +56,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite
     Route::resource('empresas', EmpresaParceiraController::class)->except(['destroy']);
     Route::resource('contratos', ContratoController::class)->except(['destroy']);
     Route::resource('colaboradores', ColaboradorController::class)->except(['destroy'])->parameters(['colaboradores' => 'colaborador']);
+    Route::resource('impostos', TaxController::class); // ADICIONADO
 
     Route::get('/mural', [MuralController::class, 'index'])->name('mural.index');
 

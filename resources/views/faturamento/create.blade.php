@@ -65,8 +65,29 @@
                                         <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-mono">{{ $totalHoras }}</dd>
                                     </div>
                                     <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                                        <dt class="text-sm font-bold text-gray-600">Valor Total a Faturar</dt>
-                                        <dd class="mt-1 text-sm font-bold text-gray-900 sm:mt-0 sm:col-span-2 font-mono">{{ 'R$ ' . number_format($valorTotal, 2, ',', '.') }}</dd>
+                                        <dt class="text-sm font-medium text-gray-500">Valor dos Serviços</dt>
+                                        <dd id="valor-base" data-valor-base="{{ $valorTotal }}" class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-mono">{{ 'R$ ' . number_format($valorTotal, 2, ',', '.') }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+
+                            <div class="mt-6">
+                                <x-input-label for="impostos_ids" :value="__('Aplicar Impostos (opcional)')" />
+                                <select id="impostos_ids" name="impostos_ids[]" multiple class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    @foreach($impostos as $imposto)
+                                        <option value="{{ $imposto->id }}" data-aliquota="{{ $imposto->aliquota }}" data-tipo-aliquota="{{ $imposto->tipo_aliquota }}">
+                                            {{ $imposto->nome }} ({{ $imposto->aliquota . ($imposto->tipo_aliquota == 'percentual' ? '%' : ' Fixo') }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-2 text-sm text-gray-500">Segure Ctrl (ou Cmd em Mac) para selecionar múltiplos impostos.</p>
+                            </div>
+
+                            <div class="mt-6 border-t border-gray-200">
+                                <dl>
+                                     <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                                        <dt class="text-sm font-bold text-gray-600">VALOR TOTAL DA FATURA</dt>
+                                        <dd id="valor-total-fatura" class="mt-1 text-lg font-bold text-gray-900 sm:mt-0 sm:col-span-2 font-mono">{{ 'R$ ' . number_format($valorTotal, 2, ',', '.') }}</dd>
                                     </div>
                                 </dl>
                             </div>
@@ -117,4 +138,42 @@
             @endif
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const valorBaseElement = document.getElementById('valor-base');
+            const impostosSelect = document.getElementById('impostos_ids');
+            const valorTotalFaturaElement = document.getElementById('valor-total-fatura');
+
+            if (!valorBaseElement || !impostosSelect || !valorTotalFaturaElement) {
+                return;
+            }
+
+            const valorBase = parseFloat(valorBaseElement.getAttribute('data-valor-base')) || 0;
+
+            function calcularTotal() {
+                let valorTotalImpostos = 0;
+                const options = impostosSelect.selectedOptions;
+
+                for (let i = 0; i < options.length; i++) {
+                    const option = options[i];
+                    const aliquota = parseFloat(option.getAttribute('data-aliquota'));
+                    const tipoAliquota = option.getAttribute('data-tipo-aliquota');
+
+                    if (tipoAliquota === 'percentual') {
+                        valorTotalImpostos += (valorBase * aliquota) / 100;
+                    } else { // 'fixa'
+                        valorTotalImpostos += aliquota;
+                    }
+                }
+
+                const valorFinal = valorBase + valorTotalImpostos;
+                valorTotalFaturaElement.textContent = 'R$ ' + valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            impostosSelect.addEventListener('change', calcularTotal);
+        });
+    </script>
+    @endpush
 </x-app-layout>
