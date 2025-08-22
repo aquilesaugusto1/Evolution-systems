@@ -23,6 +23,7 @@ class User extends Authenticatable
     protected $fillable = [
         'nome',
         'sobrenome',
+        'cpf',
         'email',
         'email_totvs_partner',
         'password',
@@ -47,6 +48,9 @@ class User extends Authenticatable
         'ip_aceite',
         'created_by',
         'updated_by',
+        'tipo_chave_pix',
+        'chave_pix',
+        'metodo_pagamento',
     ];
 
     protected $hidden = [

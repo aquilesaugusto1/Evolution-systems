@@ -66,9 +66,9 @@
                             <div>
                                 <x-input-label for="tipo_periodo" :value="__('Tipo de Período')" />
                                 <select name="tipo_periodo" id="tipo_periodo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-                                    <option value="Período Inteiro" @selected(old('tipo_periodo') == 'Período Inteiro')>Período Inteiro (9h)</option>
-                                    <option value="Meio Período" @selected(old('tipo_periodo') == 'Meio Período')>Meio Período</option>
-                                    <option value="Personalizado" @selected(old('tipo_periodo') == 'Personalizado')>Personalizado</option>
+                                    <option value="integral" @selected(old('tipo_periodo') == 'integral')>Período Integral</option>
+                                    <option value="meio" @selected(old('tipo_periodo') == 'meio')>Meio Período</option>
+                                    <option value="personalizado" @selected(old('tipo_periodo', 'personalizado') == 'personalizado')>Personalizado</option>
                                 </select>
                             </div>
 
@@ -104,6 +104,15 @@
         const contratoSelect = document.getElementById('contrato_id');
         const consultorSelect = document.getElementById('consultor_id');
         const oldConsultorId = "{{ old('consultor_id') }}";
+        const dataInput = document.getElementById('data');
+
+        if (!dataInput.value) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dataInput.value = `${year}-${month}-${day}`;
+        }
 
         function fetchConsultores(contratoId, selectedConsultorId = null) {
             consultorSelect.innerHTML = '<option value="">Carregando...</option>';
@@ -147,13 +156,13 @@
             fetchConsultores(contratoSelect.value, oldConsultorId);
         }
 
-        // Lógica para o período
         const tipoPeriodoSelect = document.getElementById('tipo_periodo');
         const horaInicioInput = document.getElementById('hora_inicio');
         const horaFimInput = document.getElementById('hora_fim');
 
-        function atualizarHoraFim() {
-            if (tipoPeriodoSelect.value === 'Período Inteiro' && horaInicioInput.value) {
+        function ajustarHoras() {
+            if (tipoPeriodoSelect.value === 'integral') {
+                horaInicioInput.value = '09:00';
                 horaFimInput.disabled = true;
                 const [horas, minutos] = horaInicioInput.value.split(':').map(Number);
                 const dataInicio = new Date();
@@ -169,10 +178,14 @@
             }
         }
 
-        tipoPeriodoSelect.addEventListener('change', atualizarHoraFim);
-        horaInicioInput.addEventListener('change', atualizarHoraFim);
+        tipoPeriodoSelect.addEventListener('change', ajustarHoras);
+        horaInicioInput.addEventListener('change', function() {
+            if (tipoPeriodoSelect.value === 'integral') {
+                ajustarHoras();
+            }
+        });
 
-        atualizarHoraFim();
+        ajustarHoras();
     });
     </script>
     @endpush

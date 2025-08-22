@@ -98,6 +98,7 @@ class ColaboradorController extends Controller
         $rules = [
             'nome' => ['required', 'string', 'max:255'],
             'sobrenome' => ['nullable', 'string', 'max:255'],
+            'cpf' => ['nullable', 'string', 'max:14'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:usuarios,email,'.$id],
             'funcao' => ['required', 'string', 'in:consultor,techlead,administrativo,coordenador_operacoes,coordenador_tecnico,comercial'],
             'tipo_contrato' => ['nullable', 'string'],
@@ -124,6 +125,7 @@ class ColaboradorController extends Controller
             'chave_pix' => ['nullable', 'string', 'max:255'],
             'salario_mensal' => ['nullable', 'numeric', 'min:0'],
             'valor_hora' => ['nullable', 'numeric', 'min:0'],
+            'metodo_pagamento' => ['nullable', 'string', 'in:pix,ted'],
         ];
         if (! $id || $request->filled('password')) {
             $rules['password'] = ['required', 'confirmed', Rules\Password::defaults()];

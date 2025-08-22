@@ -39,13 +39,16 @@ class PagamentoController extends Controller
             $pagamentoExistente = $colaborador->pagamentos()
                 ->whereYear('periodo_ref', $periodo->year)
                 ->whereMonth('periodo_ref', $periodo->month)
+                ->with('apontamentos')
                 ->first();
 
             if ($pagamentoExistente) {
                 $dados['status_pagamento'] = ucfirst($pagamentoExistente->status);
                 $dados['valor_calculado'] = $pagamentoExistente->valor_total;
                 if ($colaborador->tipo_contrato === 'PJ Horista') {
-                    $totalHorasDecimal = $pagamentoExistente->apontamentos()->sum('horas_gastas_decimal');
+                    $totalHorasDecimal = $pagamentoExistente->apontamentos->reduce(function ($carry, $item) {
+                        return $carry + abs($item->horas_gastas_decimal);
+                    }, 0);
                     $dados['horas_trabalhadas'] = $this->convertDecimalToTime($totalHorasDecimal);
                 }
             } else {
@@ -63,7 +66,9 @@ class PagamentoController extends Controller
                             ->whereMonth('data_apontamento', $periodo->month)
                             ->get();
 
-                        $totalHorasDecimal = $apontamentos->sum('horas_gastas_decimal');
+                        $totalHorasDecimal = $apontamentos->reduce(function ($carry, $item) {
+                            return $carry + abs($item->horas_gastas_decimal);
+                        }, 0);
                         $dados['horas_trabalhadas'] = $this->convertDecimalToTime($totalHorasDecimal);
                         $dados['valor_calculado'] = $totalHorasDecimal * ($colaborador->valor_hora ?? 0);
                         break;
@@ -123,7 +128,9 @@ class PagamentoController extends Controller
                                 return;
                             }
                             
-                            $totalHoras = $apontamentos->sum('horas_gastas_decimal');
+                            $totalHoras = $apontamentos->reduce(function ($carry, $item) {
+                                return $carry + abs($item->horas_gastas_decimal);
+                            }, 0);
                             $valorAPagar = $totalHoras * ($colaborador->valor_hora ?? 0);
                             $apontamentosIds = $apontamentos->pluck('id')->toArray();
                             break;
@@ -133,15 +140,7 @@ class PagamentoController extends Controller
                         return;
                     }
                     
-                    $transferencia = null;
-                    if (empty($colaborador->chave_pix) || empty($colaborador->tipo_chave_pix)) {
-                        $observacaoErro = 'Chave PIX ou tipo de chave não cadastrado para o colaborador.';
-                    } else {
-                        $transferencia = $asaasService->criarTransferenciaPix($colaborador, $valorAPagar);
-                        if (!$transferencia) {
-                             $observacaoErro = 'A API do Asaas recusou a transferência. Verifique os logs.';
-                        }
-                    }
+                    $transferencia = $asaasService->criarTransferencia($colaborador, $valorAPagar);
 
                     $pagamento = Pagamento::create([
                         'user_id' => $colaborador->id,
@@ -149,7 +148,7 @@ class PagamentoController extends Controller
                         'valor_total' => $valorAPagar,
                         'status' => $transferencia ? 'pago' : 'erro',
                         'asaas_transfer_id' => $transferencia['id'] ?? null,
-                        'observacoes' => !$transferencia ? $observacaoErro : null,
+                        'observacoes' => !$transferencia ? "Dados de pagamento incompletos ou inválidos." : null,
                         'processado_por' => Auth::id(),
                     ]);
 
@@ -160,7 +159,7 @@ class PagamentoController extends Controller
                         $sucessos++;
                     } else {
                         $falhas++;
-                        $errosDetalhados[] = "{$colaborador->nome} {$colaborador->sobrenome}: {$observacaoErro}";
+                        $errosDetalhados[] = "{$colaborador->nome} {$colaborador->sobrenome}: Dados de pagamento incompletos ou inválidos.";
                     }
                 });
             } catch (\Exception $e) {

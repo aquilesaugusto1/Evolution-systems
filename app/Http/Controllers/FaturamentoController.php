@@ -49,9 +49,11 @@ class FaturamentoController extends Controller
 
             $apontamentos = Apontamento::where('contrato_id', $selectedContratoId)
                 ->where('status', 'Aprovado')
-                ->where('faturavel', true)
                 ->whereNull('fatura_id')
                 ->whereBetween('data_apontamento', [$dataInicio, $dataFim])
+                ->whereHas('agenda', function ($query) {
+                    $query->where('faturavel', true);
+                })
                 ->with('consultor')
                 ->orderBy('data_apontamento')
                 ->get();

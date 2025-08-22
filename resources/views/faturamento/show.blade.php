@@ -75,8 +75,8 @@
                             <p class="text-3xl font-bold text-gray-900 tracking-tight">{{ 'R$ ' . number_format($fatura->valor_total, 2, ',', '.') }}</p>
                         </div>
                         <div class="mt-4 flex gap-2">
-                             @if($fatura->status !== \App\Enums\FaturaStatusEnum::CANCELADA)
-                                <form action="{{ route('faturamento.destroy', $fatura) }}" method="POST">
+                            @if($fatura->status !== \App\Enums\FaturaStatusEnum::CANCELADA)
+                                <form action="{{ route('faturamento.destroy', $fatura) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja cancelar esta fatura? Esta ação não pode ser desfeita.');">
                                     @csrf
                                     @method('DELETE')
                                     <x-danger-button>Cancelar Fatura</x-danger-button>

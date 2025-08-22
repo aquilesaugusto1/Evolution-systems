@@ -123,43 +123,123 @@ class AsaasService
         }
     }
     
-    public function criarTransferenciaPix(User $colaborador, float $valor): ?array
+    public function criarTransferencia(User $colaborador, float $valor): ?array
     {
-        $dadosBancarios = $colaborador->dados_bancarios;
-        $dadosPj = $colaborador->dados_empresa_prestador;
+        $payload = null;
+        $metodoPagamento = $colaborador->metodo_pagamento ?? 'pix';
 
-        if (empty($dadosBancarios['banco']) || empty($dadosBancarios['agencia']) || empty($dadosBancarios['conta'])) {
-            Log::error("Dados bancários incompletos para o colaborador ID: {$colaborador->id}");
+        if ($metodoPagamento === 'pix' && !empty($colaborador->chave_pix) && !empty($colaborador->tipo_chave_pix)) {
+            $payload = $this->buildPayloadPix($colaborador, $valor);
+        } elseif ($metodoPagamento === 'ted') {
+            $payload = $this->buildPayloadTed($colaborador, $valor);
+        }
+
+        if (!$payload) {
+            Log::error("Dados de pagamento incompletos ou inválidos para o colaborador ID: {$colaborador->id}", ['metodo' => $metodoPagamento]);
             return null;
         }
 
         try {
-            $payload = [
-                'value' => $valor,
-                'bankAccount' => [
-                    'bank' => ['code' => $dadosBancarios['banco']],
-                    'accountName' => $dadosPj['razao_social'] ?? $colaborador->nome . ' ' . $colaborador->sobrenome,
-                    'ownerName' => $dadosPj['razao_social'] ?? $colaborador->nome . ' ' . $colaborador->sobrenome,
-                    'cpfCnpj' => $dadosPj['cnpj'] ?? '', // Adicionar CPF se tiver
-                    'agency' => $dadosBancarios['agencia'],
-                    'account' => $dadosBancarios['conta'],
-                    'accountDigit' => $dadosBancarios['conta_digito'] ?? '',
-                    'bankAccountType' => str_contains(strtolower($dadosBancarios['tipo_conta'] ?? 'corrente'), 'corrente') ? 'CONTA_CORRENTE' : 'CONTA_POUPANCA',
-                ],
-            ];
-
             $response = $this->http->post('/transfers', $payload);
 
             if ($response->successful()) {
                 return $response->json();
             }
 
-            Log::error('Falha ao criar transferência PIX no Asaas: ' . $response->body(), ['payload' => $payload]);
+            Log::error('Falha ao criar transferência no Asaas: ' . $response->body(), ['payload' => $payload]);
             return null;
 
         } catch (\Exception $e) {
-            Log::error('Exceção ao criar transferência PIX no Asaas: ' . $e->getMessage());
+            Log::error('Exceção ao criar transferência no Asaas: ' . $e->getMessage());
             return null;
         }
+    }
+
+    private function formatPixKey(string $key, string $type): string
+    {
+        $key = trim($key);
+        switch ($type) {
+            case 'CPF':
+            case 'CNPJ':
+                return preg_replace('/[^0-9]/', '', $key);
+            case 'PHONE':
+                $numericKey = preg_replace('/[^0-9]/', '', $key);
+                if (strlen($numericKey) >= 10) { // Garante que tem pelo menos DDD + número
+                    return '+55' . $numericKey;
+                }
+                return $key; // Retorna como está se não for um formato de telefone reconhecível
+            default:
+                return $key;
+        }
+    }
+
+    private function buildPayloadPix(User $colaborador, float $valor): ?array
+    {
+        $formattedKey = $this->formatPixKey($colaborador->chave_pix, $colaborador->tipo_chave_pix);
+
+        return [
+            'operationType' => 'PIX',
+            'value' => $valor,
+            'pixAddressKey' => $formattedKey,
+            'pixAddressKeyType' => $colaborador->tipo_chave_pix,
+        ];
+    }
+
+    private function buildPayloadTed(User $colaborador, float $valor): ?array
+    {
+        $dadosBancarios = $colaborador->dados_bancarios;
+        $dadosPj = $colaborador->dados_empresa_prestador;
+        
+        $bankCode = $this->getBankCode($dadosBancarios['banco'] ?? '');
+        $cpfCnpj = preg_replace('/[^0-9]/', '', $dadosPj['cnpj'] ?? $colaborador->cpf);
+
+        if (empty($bankCode) || empty($dadosBancarios['agencia']) || empty($dadosBancarios['conta']) || empty($cpfCnpj)) {
+            return null;
+        }
+
+        $contaCompleta = $dadosBancarios['conta'];
+        $conta = preg_replace('/[^0-9-]/', '', $contaCompleta);
+        $digito = '';
+
+        if (str_contains($conta, '-')) {
+            $parts = explode('-', $conta);
+            $conta = $parts[0];
+            $digito = $parts[1];
+        } else if (strlen($conta) > 1) {
+            $digito = substr($conta, -1);
+            $conta = substr($conta, 0, -1);
+        }
+
+        return [
+            'operationType' => 'TED',
+            'value' => $valor,
+            'bankAccount' => [
+                'bank' => ['code' => $bankCode],
+                'accountName' => $dadosPj['razao_social'] ?? $colaborador->nome . ' ' . $colaborador->sobrenome,
+                'ownerName' => $dadosPj['razao_social'] ?? $colaborador->nome . ' ' . $colaborador->sobrenome,
+                'cpfCnpj' => $cpfCnpj,
+                'agency' => $dadosBancarios['agencia'],
+                'account' => $conta,
+                'accountDigit' => $digito,
+                'bankAccountType' => str_contains(strtolower($dadosBancarios['tipo_conta'] ?? 'corrente'), 'corrente') ? 'CONTA_CORRENTE' : 'CONTA_POUPANCA',
+            ],
+        ];
+    }
+
+    private function getBankCode(string $bankName): ?string
+    {
+        $banks = [
+            'Banco do Brasil' => '001',
+            'Bradesco' => '237',
+            'Caixa Econômica Federal' => '104',
+            'Itaú Unibanco' => '341',
+            'Itaú' => '341',
+            'Santander' => '033',
+            'Nu Pagamentos S.A.' => '260',
+            'Banco Inter' => '077',
+            'C6 Bank' => '336',
+        ];
+
+        return $banks[$bankName] ?? null;
     }
 }

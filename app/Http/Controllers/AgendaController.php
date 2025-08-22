@@ -107,8 +107,7 @@ class AgendaController extends Controller
             'data' => 'required|date_format:Y-m-d',
             'hora_inicio' => 'required|date_format:H:i',
             'descricao' => 'nullable|string',
-            'status' => 'required|string|in:Agendada,Realizada,Cancelada',
-            'tipo_periodo' => 'required|string|in:personalizado,inteiro,meio',
+            'tipo_periodo' => 'required|string|in:integral,meio,personalizado',
             'faturavel' => 'nullable|boolean',
         ]);
 
@@ -124,6 +123,7 @@ class AgendaController extends Controller
         $data = $validated;
         $data['data_hora'] = $validated['data'] . ' ' . $validated['hora_inicio'];
         $data['faturavel'] = $request->boolean('faturavel');
+        $data['status'] = 'Agendada';
 
         $agenda = Agenda::create($data);
 
@@ -201,7 +201,7 @@ class AgendaController extends Controller
             'hora_inicio' => 'required|date_format:H:i',
             'descricao' => 'nullable|string',
             'status' => 'required|string|in:Agendada,Realizada,Cancelada',
-            'tipo_periodo' => 'required|string|in:personalizado,inteiro,meio',
+            'tipo_periodo' => 'required|string|in:integral,meio,personalizado',
             'faturavel' => 'nullable|boolean',
         ]);
         $user = Auth::user();

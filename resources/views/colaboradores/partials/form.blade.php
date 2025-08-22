@@ -24,6 +24,7 @@
         <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-4">
                 <div><x-input-label for="nome" :value="__('Nome')" /><x-text-input id="nome" name="nome" type="text" class="mt-1 block w-full" :value="old('nome', $colaborador->nome ?? '')" required autofocus /></div>
+                <div><x-input-label for="cpf" :value="__('CPF')" /><x-text-input id="cpf" name="cpf" type="text" class="mt-1 block w-full" :value="old('cpf', $colaborador->cpf ?? '')" /></div>
                 <div><x-input-label for="data_nascimento" :value="__('Data de Nascimento')" /><x-text-input id="data_nascimento" name="data_nascimento" type="date" class="mt-1 block w-full" :value="old('data_nascimento', isset($colaborador) ? $colaborador->data_nascimento?->format('Y-m-d') : '')" /></div>
                 <div><x-input-label for="naturalidade" :value="__('Natural de:')" /><x-text-input id="naturalidade" name="naturalidade" type="text" class="mt-1 block w-full" :value="old('naturalidade', $colaborador->naturalidade ?? '')" /></div>
                 <div><x-input-label for="rua" :value="__('Rua')" /><x-text-input id="rua" name="endereco[rua]" type="text" class="mt-1 block w-full" :value="old('endereco.rua', $colaborador->endereco['rua'] ?? '')" /></div>
@@ -32,6 +33,7 @@
             </div>
             <div class="space-y-4">
                 <div><x-input-label for="sobrenome" :value="__('Sobrenome')" /><x-text-input id="sobrenome" name="sobrenome" type="text" class="mt-1 block w-full" :value="old('sobrenome', $colaborador->sobrenome ?? '')" /></div>
+                <div></div> <!-- Espaçador para alinhar com o CPF -->
                 <div><x-input-label for="nacionalidade" :value="__('Nacionalidade')" /><x-text-input id="nacionalidade" name="nacionalidade" type="text" class="mt-1 block w-full" :value="old('nacionalidade', $colaborador->nacionalidade ?? '')" /></div>
                 <div><x-input-label for="bairro" :value="__('Bairro')" /><x-text-input id="bairro" name="endereco[bairro]" type="text" class="mt-1 block w-full" :value="old('endereco.bairro', $colaborador->endereco['bairro'] ?? '')" /></div>
                 <div><x-input-label for="estado" :value="__('Estado')" /><x-text-input id="estado" name="endereco[estado]" type="text" class="mt-1 block w-full" :value="old('endereco.estado', $colaborador->endereco['estado'] ?? '')" /></div>
@@ -113,12 +115,23 @@
     
     <div>
         <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Dados Bancários</h3>
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="mt-4">
+            <div class="max-w-xs">
+                <x-input-label for="metodo_pagamento" :value="__('Método de Pagamento Preferencial')" />
+                <select name="metodo_pagamento" id="metodo_pagamento" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                    <option value="pix" @selected(old('metodo_pagamento', $colaborador->metodo_pagamento ?? 'pix') == 'pix')>PIX</option>
+                    <option value="ted" @selected(old('metodo_pagamento', $colaborador->metodo_pagamento ?? '') == 'ted')>TED (Conta Bancária)</option>
+                </select>
+            </div>
+        </div>
+        <div id="dados_ted_container" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-4">
                 <div><x-input-label for="banco" :value="__('Banco')" /><x-text-input id="banco" name="dados_bancarios[banco]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.banco', $colaborador->dados_bancarios['banco'] ?? '')" /></div>
                 <div><x-input-label for="agencia" :value="__('Agência')" /><x-text-input id="agencia" name="dados_bancarios[agencia]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.agencia', $colaborador->dados_bancarios['agencia'] ?? '')" /></div>
-                <div><x-input-label for="conta" :value="__('Conta')" /><x-text-input id="conta" name="dados_bancarios[conta]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.conta', $colaborador->dados_bancarios['conta'] ?? '')" /></div>
+                <div><x-input-label for="conta" :value="__('Conta com dígito (ex: 12345-6)')" /><x-text-input id="conta" name="dados_bancarios[conta]" type="text" class="mt-1 block w-full" :value="old('dados_bancarios.conta', $colaborador->dados_bancarios['conta'] ?? '')" /></div>
             </div>
+        </div>
+        <div id="dados_pix_container" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-4">
                 <div>
                     <x-input-label for="tipo_chave_pix" :value="__('Tipo de Chave PIX')" />
@@ -129,6 +142,8 @@
                         @endforeach
                     </select>
                 </div>
+            </div>
+            <div class="space-y-4">
                 <div>
                     <x-input-label for="chave_pix" :value="__('Chave PIX')" />
                     <x-text-input id="chave_pix" name="chave_pix" type="text" class="mt-1 block w-full" :value="old('chave_pix', $colaborador->chave_pix ?? '')" />
@@ -218,6 +233,26 @@
         
         tipoContratoSelect.addEventListener('change', toggleFields);
         toggleFields();
+
+        // Lógica para alternar campos de pagamento
+        const metodoPagamentoSelect = document.getElementById('metodo_pagamento');
+        const dadosPixContainer = document.getElementById('dados_pix_container');
+        const dadosTedContainer = document.getElementById('dados_ted_container');
+
+        function togglePaymentFields() {
+            const metodo = metodoPagamentoSelect.value;
+
+            if (metodo === 'pix') {
+                dadosPixContainer.classList.remove('hidden');
+                dadosTedContainer.classList.add('hidden');
+            } else if (metodo === 'ted') {
+                dadosPixContainer.classList.add('hidden');
+                dadosTedContainer.classList.remove('hidden');
+            }
+        }
+
+        metodoPagamentoSelect.addEventListener('change', togglePaymentFields);
+        togglePaymentFields();
     });
 </script>
 @endpush
