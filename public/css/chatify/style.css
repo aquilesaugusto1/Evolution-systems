@@ -1182,3 +1182,6 @@ div.loadingPlaceholder-date {
   border-radius: 4px;
   background: transparent;
 }
+.messenger {
+  margin-left: 50px; /* Ajuste este valor como preferir */
+}

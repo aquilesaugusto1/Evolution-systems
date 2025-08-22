@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.messenger {
+  margin-left: 50px; /* Ajuste este valor como preferir */
+}
