@@ -1,90 +1,57 @@
-{{-- -------------------- Saved Messages -------------------- --}}
-@if($get == 'saved')
-    <table class="messenger-list-item" data-contact="{{ Auth::user()->id }}">
-        <tr data-action="0">
-            {{-- Avatar side --}}
-            <td>
-            <div class="saved-messages avatar av-m">
-                <span class="far fa-bookmark"></span>
-            </div>
-            </td>
-            {{-- center side --}}
-            <td>
-                <p data-id="{{ Auth::user()->id }}" data-type="user">Saved Messages <span>You</span></p>
-                <span>Save messages secretly</span>
-            </td>
-        </tr>
-    </table>
-@endif
-
-{{-- -------------------- Contact list -------------------- --}}
-@if($get == 'users' && !!$lastMessage)
-<?php
-$lastMessageBody = mb_convert_encoding($lastMessage->body, 'UTF-8', 'UTF-8');
-$lastMessageBody = strlen($lastMessageBody) > 30 ? mb_substr($lastMessageBody, 0, 30, 'UTF-8').'..' : $lastMessageBody;
-?>
-<table class="messenger-list-item" data-contact="{{ $user->id }}">
-    <tr data-action="0">
-        {{-- Avatar side --}}
-        <td style="position: relative">
-            @if($user->active_status)
-                <span class="activeStatus"></span>
-            @endif
-        <div class="avatar av-m"
-        style="background-image: url('{{ $user->avatar }}');">
-        </div>
-        </td>
-        {{-- center side --}}
-        <td>
-        <p data-id="{{ $user->id }}" data-type="user">
-            {{ strlen($user->name) > 12 ? trim(substr($user->name,0,12)).'..' : $user->name }}
-            <span class="contact-item-time" data-time="{{$lastMessage->created_at}}">{{ $lastMessage->timeAgo }}</span></p>
+{{-- -------------------- A contact item from the list -------------------- --}}
+@if($get == 'users')
+<div class="messenger-list-item" data-contact="{{ $user->id }}">
+    {{-- Avatar --}}
+    <div class="avatar av-m" style="background-image: url('{{ $user->foto_url ?? asset('vendor/chatify/images/avatar.png') }}');">
+    </div>
+    {{-- User details --}}
+    <div class="user-details">
+        <p data-id="{{ $user->id }}" data-type="user">{{ strlen($user->nome) > 12 ? trim(substr($user->nome,0,12)).'..' : $user->nome }}</p>
+        {{-- Last message --}}
         <span>
-            {{-- Last Message user indicator --}}
-            {!!
-                $lastMessage->from_id == Auth::user()->id
-                ? '<span class="lastMessageIndicator">You :</span>'
-                : ''
-            !!}
-            {{-- Last message body --}}
-            @if($lastMessage->attachment == null)
-            {!!
-                $lastMessageBody
-            !!}
+            @if($lastMessage)
+                {!! $lastMessage->from_id == auth()->user()->id ? '<span class="lastMessageIndicator">Você:</span>' : '' !!}
+                @if($lastMessage->attachment == null)
+                    {{ strlen($lastMessage->body) > 20 ? trim(substr($lastMessage->body, 0, 20)).'..' : $lastMessage->body }}
+                @else
+                    <span class="fas fa-file"></span> Anexo
+                @endif
             @else
-            <span class="fas fa-file"></span> Attachment
+                Inicie uma conversa!
             @endif
         </span>
-        {{-- New messages counter --}}
-            {!! $unseenCounter > 0 ? "<b>".$unseenCounter."</b>" : '' !!}
-        </td>
-    </tr>
-</table>
+    </div>
+    {{-- Time and seen indicator --}}
+    <div class="time-seen">
+        <span class="time">{{ $lastMessage ? $lastMessage->created_at->diffForHumans() : '' }}</span>
+        @if($lastMessage && $lastMessage->from_id == auth()->user()->id)
+            <span class="seen-indicator">
+                {!! $lastMessage->seen > 0 ? '<span class="fas fa-check-double seen"></span>' : '<span class="fas fa-check"></span>' !!}
+            </span>
+        @endif
+    </div>
+</div>
 @endif
 
-{{-- -------------------- Search Item -------------------- --}}
+{{-- -------------------- A search item from the list -------------------- --}}
 @if($get == 'search_item')
-<table class="messenger-list-item" data-contact="{{ $user->id }}">
-    <tr data-action="0">
-        {{-- Avatar side --}}
-        <td>
-        <div class="avatar av-m"
-        style="background-image: url('{{ $user->avatar }}');">
-        </div>
-        </td>
-        {{-- center side --}}
-        <td>
-            <p data-id="{{ $user->id }}" data-type="user">
-            {{ strlen($user->name) > 12 ? trim(substr($user->name,0,12)).'..' : $user->name }}
-        </td>
-
-    </tr>
-</table>
+<div class="messenger-list-item" data-contact="{{ $user->id }}">
+    {{-- Avatar --}}
+    <div class="avatar av-m" style="background-image: url('{{ $user->foto_url ?? asset('vendor/chatify/images/avatar.png') }}');">
+    </div>
+    {{-- User details --}}
+    <div class="user-details">
+        <p data-id="{{ $user->id }}" data-type="user">
+        {{ strlen($user->nome) > 12 ? trim(substr($user->nome,0,12)).'..' : $user->nome }}</p>
+    </div>
+</div>
 @endif
 
-{{-- -------------------- Shared photos Item -------------------- --}}
+{{-- -------------------- Shared photos item -------------------- --}}
 @if($get == 'sharedPhoto')
-<div class="shared-photo chat-image" style="background-image: url('{{ $image }}')"></div>
+<div class="shared-photo-item">
+    <a href="{{ $image }}" data-lightbox="shared-photos">
+        <div class="shared-photo" style="background-image: url('{{ $image }}')"></div>
+    </a>
+</div>
 @endif
-
-

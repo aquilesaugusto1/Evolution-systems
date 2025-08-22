@@ -17,6 +17,8 @@ use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\SugestaoController;
 use App\Http\Controllers\TermoAceiteController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 Route::get('/', function () {
     return view('welcome');
@@ -88,3 +90,29 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\VerificarTermoAceite
 });
 
 require __DIR__.'/auth.php';
+
+// ROTA CUSTOMIZADA PARA CORRIGIR O CHATIFY
+Route::get('/chatify/getContacts', function () {
+    // Busca todos os usuários que não são o usuário logado e estão ativos
+    $users = User::where('id', '!=', Auth::id())
+                 ->where('status', 'Ativo')
+                 ->orderBy('nome', 'asc')
+                 ->get();
+
+    $contacts = '';
+    if ($users->count() > 0) {
+        foreach ($users as $user) {
+            // Para cada usuário, renderiza o item da lista de contatos
+            $contacts .= view('Chatify::layouts.listItem', [
+                'get' => 'users',
+                'user' => $user,
+                'lastMessage' => null // Deixamos a última mensagem nula para simplificar
+            ])->render();
+        }
+    } else {
+        // Mensagem se nenhum outro usuário for encontrado
+        $contacts = '<p class="message-hint center-el"><span>Nenhum outro usuário encontrado.</span></p>';
+    }
+
+    return response()->json(['contacts' => $contacts]);
+})->middleware('auth');
